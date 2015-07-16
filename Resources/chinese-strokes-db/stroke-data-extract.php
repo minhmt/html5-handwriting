@@ -1,56 +1,93 @@
 <?php
 
-define('PUBLICPATH',__DIR__. '/');
+define('PUBLICPATH', __DIR__ . '/');
 
-function getChinaLine() {
-    $handle = fopen(PUBLICPATH . "stroke-count-db.txt", "r");
-    $data = array();
-    if ($handle) {
-        while (($line = fgets($handle)) !== false) {
-            $arr = preg_split('/[\s]+/', $line);
-            $code = strtoupper($arr[0]);
-            $code = str_replace('U+', '', $code);
-            $data[$code][$arr[1]] = $arr[2];
+$data = array(); // all dictionary chars
+$aData  =   array(); // all dictionary  chars
+$sData = array(); // simplified chars
+$tData = array(); //traditional chars
+
+$handle = fopen(PUBLICPATH . "stroke-count-db.txt", "r");
+
+if ($handle) {
+    while (($line = fgets($handle)) !== false) {
+        $arr = preg_split('/[\s]+/', $line);
+        $code = strtoupper($arr[0]);
+        $code = str_replace('U+', '', $code);
+        if ($arr[1] == 'kTotalStrokes') {
+            $data[$code]['strokeCount'] = $arr[2];
         }
-
-        fclose($handle);
     }
 
-    $handle = fopen(PUBLICPATH . "dictionary.txt", "r");
+    fclose($handle);
+}
 
-    if ($handle) {
-        while (($line = fgets($handle)) !== false) {
-            $arr = explode('|', $line);
-            $code = strtoupper(trim($arr[0]));
-            $data[$code]['type'] = trim($arr[1]);
-            
-            $char_type  =  $data[$code]['type'];
-            
-            switch ($char_type) {
-                case 0:
-                    break;
-                case 1 : // Traditional Char
-                    
-                    break;
+$handle = fopen(PUBLICPATH . "dictionary.txt", "r");
+
+if ($handle) {
+    while (($line = fgets($handle)) !== false) {
+        $arr = explode('|', $line);
+        $code = strtoupper(trim($arr[0]));
+        $data[$code]['type'] = (int)trim($arr[1]);
+
+        $char_type = $data[$code]['type'];
+
+        switch ($char_type) {
+            case 0:
+                $sData[$data[$code]['strokeCount']][] = $code;
+                $tData[$data[$code]['strokeCount']][] = $code;
                 
-                case 2: 
-                    break;
+                $aData[$data[$code]['strokeCount']][] = $code;
                 
-                default: // both
-                    unlink($data[$code]);
-                    break;
-            }
+                break;
+            case 1 : // simplified Char
+                $sData[$data[$code]['strokeCount']][] = $code;
+                $tData[$data[$code]['strokeCount']][] =  trim($arr[2]);                
+
+                $aData[$data[$code]['strokeCount']][] = $code;
+                
+                break;
+
+            case 2:  // traditional
+                
+                $tData[$data[$code]['strokeCount']][] = $code;
+                $sData[$data[$code]['strokeCount']][] = trim($arr[2]);
+                $aData[$data[$code]['strokeCount']][] = $code;
+
+                break;
+
+            default: // both
+                $aData[$data[$code]['strokeCount']][] = $code;
+                unset($data[$code]);
+                break;
         }
-        fclose($handle);
     }
+    fclose($handle);
 
-        
+    writeTo($aData, 'alldict.json');
+    writeTo($sData, 'sdict.json');
+    writeTo($tData, 'tdict.json');
+    
+    
+    saveStrokeData($aData,'all');
+    saveStrokeData($sData,'simplified');
+    saveStrokeData($tData,'traditional');
+}
+
+function writeTo($data,$to_file) {
     $obj = json_encode($data);
-    $fp = fopen(PUBLICPATH . 'chinakeyword.json', 'w');
+    $fp = fopen(PUBLICPATH . $to_file, 'w');
     fwrite($fp, $obj);
     fclose($fp);
 }
 
-getChinaLine();
+function saveStrokeData($data,$folder) {
+    foreach ($data as $strokeCount => $chars) {
+        $obj = json_encode($chars);
+        $fp = fopen(PUBLICPATH . $folder.'/'.$strokeCount.'.json', 'w');
+        fwrite($fp, $obj);
+        fclose($fp);
+    }
+}
 
 
