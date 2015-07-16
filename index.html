@@ -7,10 +7,14 @@
         <link rel="stylesheet" href="css/bootstrap.min.css">
 
         <script src="js/jquery.min.js"></script>
-
+        <script src="js/hammer.min.js"></script>
 
         <style>
 
+            .container {
+                margin-top:  20px;
+            }
+            
             #drawContainer canvas {
                 border: 5px solid #ccc;
             }    
@@ -21,8 +25,7 @@
 
 
             #clear{
-                position: absolute;
-                left: 5%;
+                
             }
 
             #counter {
@@ -57,6 +60,7 @@
                 var canvas = document.getElementById('handwriting-canvas');
                 var strokeCount = 0;
                 var radicalCount = 0;
+                var searchString    =   '';
 
 
                 canvas.width = 400;
@@ -144,7 +148,7 @@
                     return vector(x / l.length, y / l.length)
                 }
 
-                $(canvas).mousedown(function(e) {
+                $(canvas).on('mousedown touchstart',function(e) {
                     prev = getpos(e)
                     line = [prev]
 
@@ -164,8 +168,8 @@
 
                     c.strokeStyle = "rgba(0,0,0,0.2)"
 
-
-                    $(canvas).mouseup(function() {
+                    //Stroke ENDED 
+                    $(canvas).on('mouseup touchend',function() {
                         $(canvas).unbind('mousemove').unbind('mouseup')
                         corners = [line[0]]
                         var n = 0
@@ -231,9 +235,6 @@
 
                             }
 
-
-
-
                             c.beginPath()
                             c.moveTo(corners[0].x, corners[0].y)
                             for (var i = 1; i < corners.length; i++) {
@@ -263,30 +264,39 @@
                         //count when new stroke draw ended
                         strokeCount++;
 
-                        console.log(corners);
+              //          console.log(corners);
 
                         showCounter();
 
-                        getDictionaryByStrokeCount(strokeCount);
+                        showDictionaryByStrokeCount(strokeCount);
 
                     })
 
                 })
 
 
-                function getDictionaryByStrokeCount(count) {
+                //display all matched dictionary chars 
+                function showDictionaryByStrokeCount(count) {
+                    
+                    if (strokeCount==0) return;
+                    
                     var dictOption = $('#dict').val();
                     var dictFilePath = 'data/' + dictOption + '/' + count + '.json';
                     var charsContainer;
 
+                    //clear previous recogination data
+                    $('#dictContainer').html('');
+                        
                     $.getJSON(dictFilePath, function(data) {
+                        
                         $.each(data, function(index, code) {
                             if ((index % 6) == 0) {
                                 charsContainer = $('<div class="row"></div>');
                             }
                              
-                            var char = $('<div></div>').attr('class', "col-md-2").html('<span class="btn btn-default" >'+String.fromCharCode(code)+'</span>');
+                            var char = $('<div></div>').attr('class', "col-md-2").html('<span class="btn btn-default" data-button="char" >'+String.fromCharCode(code)+'</span>');
                             charsContainer.append(char);
+                            
                             if ( ((index % 6) == 0 && index > 0) || (index== data.length-1)) {
                                 $('#dictContainer').append(charsContainer);
                             }
@@ -296,20 +306,30 @@
 
                 }
                 
+                //add selected char to Search field
+                $("#dictContainer").on('mouseup touchend',"[data-button='char']",  function(e) {
+                    e.preventDefault();                    
+                    searchString    +=  $(this).html();
+                    $("#searchText").val(searchString);
+                });
+                
+                
+                //do Search
+                $('#btnSearch').on('mouseup', function(){
+                    $("#searchText").val('');
+                    clearStrokes();
+                });
+                
+                
                 //dictionary type changed
                 $("#dict").change(function() {
-            
-                
+                    showDictionaryByStrokeCount(strokeCount);
                 });
 
                 //Clear Canvas Content
                 $('#clear').click(function() {
                     clearStrokes();
                     showCounter();
-                    
-                    
-                    var chineseStr =   String.fromCodePoint(20057) ;
-                    console.log(chineseStr);
 
                 })
 
@@ -317,8 +337,9 @@
                 function clearStrokes() {
                     c.clearRect(0, 0, canvas.width, canvas.height);
 
-                    $('#dictContainer').html('All match Chinese Charactors  will be displayed here for selection');
-
+                    //clear previous recogination data
+                    $('#dictContainer').html('');
+                    
                     strokeCount = 0;
                     radicalCount = 0;
 
@@ -338,9 +359,17 @@
             <div class="col-md-5">
                 <div id="drawContainer">
                     <canvas id="handwriting-canvas">    </canvas> 
-                    <button id="clear" class="btn btn-default" >Clear</button>
                 </div>
                 <div id="counter" >
+                    <form class="form-inline">
+                        <button id="clear" class="btn btn-default" type="button" >Clear</button>
+
+                        <div class="form-group">
+                            <input type="text" class="col-sm-10 form-control" id="searchText" placeholder="Search input here...">
+                        </div>
+                        <button id="btnSearch" class="btn btn-default" type="button"  >Submit</button>                        
+                    </form>
+
                     <ul>
                         <li id="strokeCount"></li>
                         <li id="radicalCount"></li>
@@ -351,7 +380,7 @@
             <div class="col-md-7">
                 <div id="dictOption" >
                     <fieldset>
-                        <legend>Chiese Dictionary Look Up?</legend>
+                        <legend>Chinese Dictionary Look Up?</legend>
                         <input type="radio" id="dict" name="dict" value="all"  />All<br />
                         <input type="radio" id="dict" name="dict" value="simplified" checked />Simplified<br />
                         <input type="radio" id="dict" name="dict" value="traditional" />Traditional<br />
