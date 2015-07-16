@@ -148,12 +148,12 @@
                     return vector(x / l.length, y / l.length)
                 }
 
-                $(canvas).on('mousedown touchstart',function(e) {
+                $(canvas).on('mousedown',function(e) {
                     prev = getpos(e)
                     line = [prev]
 
 
-                    $(canvas).mousemove(function(e) {
+                    $(canvas).on('mousemove', function(e) {
                         pos = getpos(e)
 
                         c.beginPath();
@@ -169,7 +169,7 @@
                     c.strokeStyle = "rgba(0,0,0,0.2)"
 
                     //Stroke ENDED 
-                    $(canvas).on('mouseup touchend',function() {
+                    $(canvas).on('mouseup',function() {
                         $(canvas).unbind('mousemove').unbind('mouseup')
                         corners = [line[0]]
                         var n = 0
@@ -273,6 +273,19 @@
                     })
 
                 })
+                
+                
+                //BOF: TOUCH SUPPORT
+                var mc = new Hammer.Manager(canvas);
+                var pan = new Hammer.Pan({direction: Hammer.DIRECTION_ALL});
+                mc.add(pan);
+                
+                 mc.on("panstart", function (e) {
+                    console.log(e);
+
+                });
+                //EOF:  TOUCH SUsPPORT
+                
 
 
                 //display all matched dictionary chars 
