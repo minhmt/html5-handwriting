@@ -13,14 +13,15 @@ $dict = $xml->xpath('/character-collection/set/character');
 $i=0;
 
 while(list( , $char) = each($dict)) {
-
-   $strokeCount =   count($char->strokes);
-   $charCode    =   count($char->utf8);
    
+   $strokeCount =   count($char->strokes->stroke);
+   $charCode    =   $char->utf8;
+   
+   $strokes_array  =   array();
    $strokes =   $char->strokes->stroke;
   // process strokes data
-   foreach ($strokes as $index=>$stroke) {
-       $strokes_array[$index]   = count($stroke);
+   foreach ($strokes as $stroke) {
+       $strokes_array[]   = count($stroke->point);
    }
    
    $data[]  =   array('code' => $charCode,
@@ -30,6 +31,8 @@ while(list( , $char) = each($dict)) {
    
    if ($i>10)  break;
    $i++;
+   
+   echo $char->utf8;
 }
 
 var_dump($data);
