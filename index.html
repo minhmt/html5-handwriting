@@ -302,19 +302,20 @@
                         
                     $.getJSON(dictFilePath, function(data) {
                         
+                        charsContainer = $('<div class="row"></div>');
+                        
                         $.each(data, function(index, code) {
-                            if ((index % 6) == 0) {
-                                charsContainer = $('<div class="row"></div>');
-                            }
+
+
+
                              
                             var char = $('<div></div>').attr('class', "col-md-2").html('<span class="btn btn-default" data-button="char" >'+String.fromCharCode(code)+'</span>');
                             charsContainer.append(char);
-                            
-                            if ( ((index % 6) == 0 && index > 0) || (index== data.length-1)) {
-                                $('#dictContainer').append(charsContainer);
-                            }
                         });
 
+                        $('#dictContainer').append(charsContainer);
+        
+        
                     });
 
                 }
