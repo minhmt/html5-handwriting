@@ -150,8 +150,6 @@ if ($handle) {
         
         $decode =   utf8_decode('u'+$code);
         
-        
-        
         $data[$code]['type'] = (int)trim($arr[1]);
 
         $char_type = $data[$code]['type'];
