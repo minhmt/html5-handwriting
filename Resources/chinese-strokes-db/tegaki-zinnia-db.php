@@ -101,13 +101,23 @@ while(list( , $char) = each($dict)) {
    $strokes_array  =   array();
    $strokes =   $char->strokes->stroke;
   /*/* process stroke diection ( 8 basic direction first: 
-   *    top-to-bottom : 0,
-   *    left-to-right: 2, 
-   *    horizontal: 3 , 
-   *    vertical: 4, 
-   *    right to left: 5, 
-   *    left to right: 6
+   *    top-to-bottom : 0/1,
+   *    left-to-right: 2/3, 
+   *    horizontal: 4 , 
+   *    vertical: 5, 
+   *    right to left: 6, 
+   *    left to right: 7
    */
+   // get the first point and the last point of the current stroke
+   $firstPoint  =   $strokes[0];
+   $lastPoint   =   $strokes[$strokeCount-1];
+   //top-bottom
+   $directions[]    =   ($firstPoint->y > $lastPoint->y) ? 0 : 1;
+   //left-right
+   $directions[]    =   ($firstPoint->x > $lastPoint->x) ? 2 : 3;
+   
+   
+   
   
   // process strokes data
    foreach ($strokes as $stroke) {
