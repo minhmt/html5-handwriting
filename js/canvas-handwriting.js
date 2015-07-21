@@ -6,6 +6,7 @@ $(document).ready(function() {
     var radicalCount = 0;
     var searchString = '';
     var matchRange    =   1;
+    var strokeDirections    =   [];
     
 
     canvas.width = 400;
@@ -231,20 +232,27 @@ $(document).ready(function() {
             }
 
             //count when new stroke draw ended
-            strokeCount++;
 
-           // console.log(corners);
 
+            console.log(corners);
+            
+            strokeDirections[strokeCount]   =   getStrokeDirections(corners);
             strokeOrder[strokeCount]    =    corners.length;
+            
+            strokeCount++;            
             showCounter();
 
             showResults(strokeCount);
             
             // console.log(strokeOrder);
+            
+//            console.log(strokeDirections);
 
         })
+        
     })
 
+    
 
     //BOF: TOUCH SUPPORT
     var mc = new Hammer.Manager(canvas);
@@ -257,6 +265,28 @@ $(document).ready(function() {
     });
     //EOF:  TOUCH SUsPPORT
 
+    // get stroke directions
+    function getStrokeDirections(strokePoints) {
+        
+        var strokePointLength   =   strokePoints.length;
+        var firstPoint  =   strokePoints[0];
+        var lastPoint   =   strokePoints[strokePointLength-1];
+        
+        var x1  =   firstPoint.x;
+        var y1  =   firstPoint.y;
+
+        var x2  =   lastPoint.x;
+        var y2  =   lastPoint.y;
+        
+        var directions  =   [];
+        
+        for (var i=0; i< strokePointLength; i++) {
+            directions['d1']  =   (x1>x2) ? 0 : 1;
+        }
+        
+        return directions;
+
+    }
 
     // get match chars bystroke order
     function getMatchChars(dictData) {
@@ -271,10 +301,15 @@ $(document).ready(function() {
             isMatch =   true;
             
             for (var i=0; i<strokeCount; i++) {
-               if ( (strokeOrder[i+1] - matchRange <= data.strokeOrder[i]) || ( strokeOrder[i+1] <=  data.strokeOrder[i])   ) {
-                    // process match order
-                    data.strokeOrder[i] =   {'matchPercent': Math.abs(strokeOrder[i+1] -data.strokeOrder[i])};
+               if ( (strokeOrder[i] - matchRange <= data.strokeOrder[i]) || ( strokeOrder[i] <=  data.strokeOrder[i])   ) {
+                    // process stroke points match
+                    data.strokeOrder[i] =   {'matchPercent': Math.abs(strokeOrder[i] -data.strokeOrder[i])};
                     
+                    //process stroke direction match
+                    if (strokeDirections[i]['d1'] !== data.directions[i]['d1']) {
+                        isMatch =   false;
+                        break;
+                    }
                     
                } else {
                    isMatch  =   false;
@@ -423,6 +458,8 @@ $(document).ready(function() {
         $('#dictContainer').html('');
 
         strokeCount = 0;
+        strokeOrder =   [];
+        strokeDirections    =   [];
         radicalCount = 0;
 
     }

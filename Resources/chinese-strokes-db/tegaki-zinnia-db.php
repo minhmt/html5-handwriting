@@ -99,37 +99,43 @@ while(list( , $char) = each($dict)) {
    $charCode    =   $char->utf8;
    
    $strokes_array  =   array();
+   $directions  =   array();
    $strokes =   $char->strokes->stroke;
-  /*/* process stroke diection ( 8 basic direction first: 
-   *    top-to-bottom : 0/1,
-   *    left-to-right: 2/3, 
-   *    horizontal: 4 , 
-   *    vertical: 5, 
-   *    right to left: 6, 
-   *    left to right: 7
+  /*/* process stroke diection ( 4 basic direction first: 
+   *    left to right : 0/1, 
+   *    horizontal/ vertical : 2/3
    */
-   // get the first point and the last point of the current stroke
-   $firstPoint  =   $strokes[0];
-   $lastPoint   =   $strokes[$strokeCount-1];
-   //top-bottom
-   $directions[]    =   ($firstPoint->y > $lastPoint->y) ? 0 : 1;
-   //left-right
-   $directions[]    =   ($firstPoint->x > $lastPoint->x) ? 2 : 3;
-   
-   
-   
-  
+         
   // process strokes data
-   foreach ($strokes as $stroke) {
-       $strokes_array[]   = count($stroke->point);
+   foreach ($strokes as $stroke){
+       $stroke_points   =   $stroke->point;
+       $stroke_points_length    =  count($stroke_points); 
+       $strokes_array[]   = $stroke_points_length;
+       
+        // get the first point and the last point of the current stroke
+        $firstPoint  =   $stroke_points[0];
+        $lastPoint   =   $stroke_points[$stroke_points_length-1];
+        
+    //    var_dump($firstPoint);
+        
+        $x1 =   (int)$firstPoint['x']; $y1  =   $firstPoint['y'];
+        $x2 =   (int)$lastPoint['x']; $y2  =   $lastPoint['y'];        
+        //right -> left / left -> right
+        $directions[]['d1']    =   ($x1 >= $x2) ? 0 : 1;
+        
+        // horizontal/ vertical
+        
+        $directions[]['d2']    =   ($y1 >= $y2) ? 0 : 1;        
+        
    }
    
    $data[$strokeCount][]  =   array('code' => mb_ord($charCode[0]),
                       'strokeCount' => $strokeCount,
-                      'strokeOrder' => $strokes_array
+                      'strokeOrder' => $strokes_array,
+                      'directions' => $directions
                         );
    
-  // if ($i>10)  break;
+   //if ($i>10)  break;
    $i++;
    
 //   echo '['.$charCode[0].']';
