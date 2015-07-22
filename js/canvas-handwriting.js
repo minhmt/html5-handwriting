@@ -22,21 +22,6 @@ $(document).ready(function() {
         }
     }
 
-    TAN_HALF_PI = Math.tan(Math.PI / 2)
-
-    function direction(d) {
-        var horiz = (Math.abs(d.x) > Math.abs(d.y))
-        if (horiz) {
-            if (d.x < 0)
-                return 0;
-            return 1;
-        } else {
-            if (d.y < 0)
-                return 2;
-            return 3;
-        }
-    }
-
     colors = ['rgba(255,0,0,0.5)',
         'rgba(0,255,0,0.5)',
         'rgba(0,0,255,0.5)',
@@ -52,10 +37,6 @@ $(document).ready(function() {
 
     function delta(a, b) {
         return vector(a.x - b.x, a.y - b.y)
-    }
-
-    function angle(d) {
-        return Math.atan((1.0 * d.y) / d.x)
     }
 
     function angle_between(a, b) {
@@ -93,6 +74,36 @@ $(document).ready(function() {
         }
         return vector(x / l.length, y / l.length)
     }
+
+
+    function getDirection(p1, p2) {
+       
+       var vangle  =  Math.abs(angle(p1, p2));
+       var direction  = {};
+
+       if (vangle>75 && vangle<105) {
+           direction['d2']   =   2; // horizontal
+       } else {
+           direction['d2']  =   3; //vertical
+       }
+       
+        if (p1.x < p2.x) {
+            direction['d1'] = 0; // left to right
+        } else {
+            direction['d1'] = 1; // right to left
+        }
+
+       return direction;
+    }
+    
+    //angle between two point in degrees
+    function angle(p1,p2) {
+        var xDiff = p2.x - p1.x;
+        var yDiff = p2.y - p1.y; 
+        var dangle =   Math.atan2(yDiff, xDiff) * (180 / Math.PI);
+        return dangle; 
+    } 
+
 
     
     // draw Axis Lines
@@ -234,7 +245,7 @@ $(document).ready(function() {
             //count when new stroke draw ended
 
 
-            console.log(corners);
+        //    console.log(corners);
             
             strokeDirections[strokeCount]   =   getStrokeDirections(corners);
             strokeOrder[strokeCount]    =    corners.length;
@@ -246,7 +257,7 @@ $(document).ready(function() {
             
             // console.log(strokeOrder);
             
-//            console.log(strokeDirections);
+            console.log(strokeDirections);
 
         })
         
@@ -278,22 +289,21 @@ $(document).ready(function() {
         var x2  =   lastPoint.x;
         var y2  =   lastPoint.y;
         
-        var directions  =   [];
+        var directions  =   {};
         
-        for (var i=0; i< strokePointLength; i++) {
-            directions['d1']  =   (x1>x2) ? 0 : 1;
-        }
+         directions  =   getDirection(firstPoint, lastPoint);
         
         return directions;
 
     }
+
 
     // get match chars bystroke order
     function getMatchChars(dictData) {
         
        //return dictData;
         
-        console.log(strokeOrder);
+ //       console.log(strokeOrder);
         
         var matchData   =   [];
         var isMatch =   true;
@@ -301,12 +311,12 @@ $(document).ready(function() {
             isMatch =   true;
             
             for (var i=0; i<strokeCount; i++) {
-               if ( (strokeOrder[i] - matchRange <= data.strokeOrder[i]) || ( strokeOrder[i] <=  data.strokeOrder[i])   ) {
+               if ( (strokeOrder[i] - matchRange <= data.strokeOrder[i]) || ( strokeOrder[i]  <=  data.strokeOrder[i])   ) {
                     // process stroke points match
                     data.strokeOrder[i] =   {'matchPercent': Math.abs(strokeOrder[i] -data.strokeOrder[i])};
                     
                     //process stroke direction match
-                    if (strokeDirections[i]['d1'] !== data.directions[i]['d1']) {
+                    if ( (strokeDirections[i]['d2'] !== data.directions[i]['d2']) || (strokeDirections[i]['d1'] !== data.directions[i]['d1'] ) ) {
                         isMatch =   false;
                         break;
                     }
@@ -337,7 +347,7 @@ $(document).ready(function() {
         
       matchData.sort(matchCompare);
         
-        console.log(matchData);
+   //     console.log(matchData);
         
         return matchData;
     }

@@ -9,50 +9,8 @@
         <script src="js/jquery.min.js"></script>
         <script src="js/hammer.min.js"></script>
 
-        <style>
+        <link rel="stylesheet" href="css/handwriting.css">
 
-            .container {
-                margin-top:  20px;
-            }
-            
-            #drawContainer canvas {
-                border: 5px solid #ccc;
-            }    
-
-            #handwriting-canvas{
-                border-radius: 5px;
-            }
-
-
-            #clear{
-                
-            }
-
-            #counter {
-
-                display: none;
-            }
-
-            #counter #strokeCount {
-                display: none;    
-            }
-
-            #counter #radicalCount {
-                display: none;
-            }
-
-            #dictOption {
-
-            }
-
-            #dictContainer {
-                margin-top: 20px;
-                height: 300px;
-                overflow-x: scroll;
-                overflow-x:hidden;
-
-            }
-        </style>
 
         <script  type="text/javascript" charset="utf-8" src="js/canvas-handwriting.js"> </script>
     </head>
@@ -83,7 +41,7 @@
                 <div id="dictOption" >
                     <fieldset>
                         <legend>Chinese Dictionary Look Up?</legend>
-                        <input type="radio" id="dict" name="dict" value="simplified"  />Simplified<br />
+                     <!--   <input type="radio" id="dict" name="dict" value="simplified"  />Simplified<br /> -->
                         <input type="radio" id="dict" name="dict" value="traditional" checked />Traditional<br />
                     </fieldset>    
                 </div>

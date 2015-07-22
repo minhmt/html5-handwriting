@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Test Canvas</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <script src="js/jquery.min.js"></script>
+        
+        <style>
+            
+            #drawContainer canvas {
+                border: 5px solid #ccc;
+            }    
+            
+            #handwriting-canvas{
+                border-radius: 5px;
+            }
+
+        </style>
+        
+        <script>
+            $(document).ready(function() {
+                var canvas = document.getElementById('handwriting-canvas');
+
+                canvas.width = 1000;
+                canvas.height = 1000;
+                
+                drawAxisLines();
+
+                drawLine({x:410,y:157},{x:553, y:261});
+                
+                drawLine({x:145,y:440},{x:870, y:364});
+
+                drawLine({x:383,y:514},{x:155, y:717});
+        
+                // draw Axis Lines
+                function drawAxisLines() {
+                  var context   =    canvas.getContext('2d');
+                  context.setLineDash([1,5]);      
+
+                  context.beginPath();
+                  context.moveTo(canvas.width/2, 0);
+                  context.lineTo(canvas.width/2, canvas.height);
+                  context.stroke();
+
+                  context.beginPath();
+                  context.moveTo(0, canvas.height/2);
+                  context.lineTo(canvas.width, canvas.height/2);
+                  context.stroke();
+
+                  context.setLineDash([3,0]);      
+
+                }
+
+                
+                
+                function drawLine(p1,p2) {
+                    
+                    console.log(p1);
+                    var context   =    canvas.getContext('2d');
+                    context.beginPath();
+                    context.moveTo(p1.x, p1.y);
+                    context.lineTo(p2.x,p2.y);
+                    context.stroke();
+                }
+
+            });
+        </script>
+    </head>
+    <body>
+        <div>Test Canvas</div>
+        <div id="drawContainer">
+            <canvas id="handwriting-canvas" width="1000" height="1000"> </canvas> 
+        </div>
+    </body>
+</html>

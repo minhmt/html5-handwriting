@@ -1,0 +1,52 @@
+@font-face {
+  font-family: 'KimBold';
+  src: url('../fonts/SimSun.ttf');
+}
+
+
+.container {
+    margin-top:  20px;
+}
+
+#drawContainer canvas {
+    border: 5px solid #ccc;
+}    
+
+#handwriting-canvas{
+    border-radius: 5px;
+}
+
+
+#clear{
+
+}
+
+#counter {
+
+    display: none;
+}
+
+#counter #strokeCount {
+    display: none;    
+}
+
+#counter #radicalCount {
+    display: none;
+}
+
+#dictOption {
+
+}
+
+#dictContainer {
+    margin-top: 20px;
+    height: 300px;
+    overflow-x: scroll;
+    overflow-x:hidden;
+
+}
+
+span.btn {
+    font-size: 28px;
+    font-family: "KimBold";
+}

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head>        
+        <title>Create Stroke Recognize Database</title>
          <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     </head>
     <body>
@@ -116,16 +117,14 @@ while(list( , $char) = each($dict)) {
         $firstPoint  =   $stroke_points[0];
         $lastPoint   =   $stroke_points[$stroke_points_length-1];
         
-    //    var_dump($firstPoint);
-        
-        $x1 =   (int)$firstPoint['x']; $y1  =   $firstPoint['y'];
-        $x2 =   (int)$lastPoint['x']; $y2  =   $lastPoint['y'];        
+        $fPoint['x'] = (int) $firstPoint['x'];
+        $fPoint['y'] = (int) $firstPoint['y'];
+        $lPoint['x'] = (int) $lastPoint['x'];
+        $lPoint['y'] = (int) $lastPoint['y'];
+
         //right -> left / left -> right
-        $directions[]['d1']    =   ($x1 >= $x2) ? 0 : 1;
-        
-        // horizontal/ vertical
-        
-        $directions[]['d2']    =   ($y1 >= $y2) ? 0 : 1;        
+        $directions[]    =   getDirection($fPoint, $lPoint);
+ 
         
    }
    
@@ -141,6 +140,7 @@ while(list( , $char) = each($dict)) {
 //   echo '['.$charCode[0].']';
 }
 
+writeTo($data,'tegaki/traditional/all.json');
 
 saveStrokeData($data,'tegaki/traditional');
 
@@ -162,6 +162,40 @@ function saveStrokeData($data,$folder) {
         fclose($fp);
     }
 }
+
+//VECTOR MATH functions for stroke direction detect
+
+
+function getDirection($p1, $p2) {
+   $angle   =  angle($p1, $p2); 
+   $vangle  =  abs($angle);
+   $direction  =   array();
+
+    if ($p1['x'] < $p2['x']) {
+        $direction['d1'] = 0; // left to right
+    } else {
+        $direction['d1'] = 1; // right to left
+    }
+
+   if ($vangle>75 && $vangle<105) {
+       $direction['d2']   =   2; // horizontal
+   } else {
+       $direction['d2']   =   3; //vertical
+   }
+   
+   return $direction;
+   
+}
+//angle between two point in degrees
+function angle($p1,$p2) {
+    $xDiff = $p2['x'] - $p1['x'];
+    $yDiff = $p2['y'] - $p1['y']; 
+    $dangle =   atan2($yDiff, $xDiff) * (180 / pi());
+    return $dangle; 
+} 
+
+
+
 
 // create JSON format in separate stroke count files
 
