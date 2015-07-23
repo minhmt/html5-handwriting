@@ -87,6 +87,7 @@ if (!function_exists('mb_html_entity_decode')) {
 
 
 $data=  array();
+$allData    =   array();
 
 $fcontent  = file_get_contents(PUBLICPATH.'handwriting-zh_TW.xml');
 $xml = new SimpleXMLElement($fcontent);
@@ -124,15 +125,16 @@ while(list( , $char) = each($dict)) {
 
         //right -> left / left -> right
         $directions[]    =   getDirection($fPoint, $lPoint);
- 
-        
-   }
+
+        }
    
-   $data[$strokeCount][]  =   array('code' => mb_ord($charCode[0]),
+   $char_data   =      array('code' => mb_ord($charCode[0]),
                       'strokeCount' => $strokeCount,
                       'strokeOrder' => $strokes_array,
                       'directions' => $directions
                         );
+   $data[$strokeCount][]  =  $char_data;
+   $allData[]   =   $char_data;
    
    //if ($i>10)  break;
    $i++;
@@ -140,12 +142,23 @@ while(list( , $char) = each($dict)) {
 //   echo '['.$charCode[0].']';
 }
 
-writeTo($data,'tegaki/traditional/all.json');
+usort($allData, 'sortByStrokeCount');
+
+writeTo($allData,'tegaki/traditional/all.json');
 
 saveStrokeData($data,'tegaki/traditional');
 
 
 
+function sortByStrokeCount($a,$b) {
+    if ($a['strokeCount']< $b['strokeCount']) {
+        return -1;
+    } else if($a['strokeCount']> $b['strokeCount']) {
+        return 1;
+    }
+    
+    return 0;
+}
 
 function writeTo($data,$to_file) {
     $obj = json_encode($data);

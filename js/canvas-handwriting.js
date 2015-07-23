@@ -2,10 +2,10 @@ $(document).ready(function() {
 
     var canvas = document.getElementById('handwriting-canvas');
     var strokeCount = 0;
-    var strokeOrder =   []; // array of stroke orders information
+    var strokeOrder =   []; // array of stroke points in order
     var radicalCount = 0;
     var searchString = '';
-    var matchRange    =   1;
+    var matchRange    =   2;
     var strokeDirections    =   [];
     
 
@@ -82,9 +82,9 @@ $(document).ready(function() {
        var direction  = {};
 
        if (vangle>75 && vangle<105) {
-           direction['d2']   =   2; // horizontal
+           direction['d2']   =   3; // horizontal
        } else {
-           direction['d2']  =   3; //vertical
+           direction['d2']  =   2; //vertical
        }
        
         if (p1.x < p2.x) {
@@ -300,26 +300,21 @@ $(document).ready(function() {
 
     // get match chars bystroke order
     function getMatchChars(dictData) {
-        
-       //return dictData;
-        
- //       console.log(strokeOrder);
-        
+       
         var matchData   =   [];
         var isMatch =   true;
+
         $.each(dictData, function(index, data) {
             isMatch =   true;
             
             for (var i=0; i<strokeCount; i++) {
-               if ( (strokeOrder[i] - matchRange <= data.strokeOrder[i]) || ( strokeOrder[i]  <=  data.strokeOrder[i])   ) {
+              
+              isMatch   = strokePointsMatch(strokeOrder[i],data.strokeOrder[i] );
+              if(true) {
                     // process stroke points match
-                    data.strokeOrder[i] =   {'matchPercent': Math.abs(strokeOrder[i] -data.strokeOrder[i])};
-                    
-                    //process stroke direction match
-                    if ( (strokeDirections[i]['d2'] !== data.directions[i]['d2']) || (strokeDirections[i]['d1'] !== data.directions[i]['d1'] ) ) {
-                        isMatch =   false;
-                        break;
-                    }
+                    data.strokeOrder[i] = {'matchPercent': Math.abs(strokeOrder[i] - data.strokeOrder[i])};
+                   // add any good Recognition Filter here
+                   isMatch  =   directionFilter(strokeDirections[i], data.directions[i]);
                     
                } else {
                    isMatch  =   false;
@@ -332,34 +327,74 @@ $(document).ready(function() {
 
         });
         
-
-        function matchCompare(a,b) {
-            for (var i=0; i< a.strokeOrder.length; i++) {
-                if (a.strokeOrder[i].matchPercent< b.strokeOrder[i].matchPercent) {
-                    return - 1;
-                }
-                if (a.strokeOrder[i].matchPercent> b.strokeOrder[i].matchPercent) {
-                    return 1;
-                }
-            }
-            return 0;
-        }
         
-      matchData.sort(matchCompare);
+        if (matchData.length > 0)
+            matchData.sort(matchCompare);
         
-   //     console.log(matchData);
+        console.log(matchData);
+        
         
         return matchData;
     }
+
     
+    //BOF: Stroke Filters 
+    
+
+    //filter by number of points/lines per a stroke    
+    function strokePointsMatch(strokePoints, dataPoints) {
+         if ( Math.abs(strokePoints - dataPoints) <= matchRange    ) {
+             return true;
+         } else {
+             return false;
+         }
+    }
+//filter by direction    
+//@param data : dictionary Data
+    function directionFilter(strokeDirection, dataDirection) {
+        var isMatch = false;
+            //horizontal /vertical direction
+            if ((strokeDirection['d2'] != dataDirection['d2'])) {
+                isMatch = false;
+                //right to left
+                if (strokeDirection['d1'] != dataDirection['d1']) {
+                    isMatch = false;
+                } else {
+                    isMatch = true;
+                }
+            }
+            
+      return isMatch;
+    }
+    //EOF: Stroke Filters
+    
+    
+    //compare  matchPercentage of stroke drawing/points
+    function matchCompare(a, b) {
+        for (var i = 0; i < a.strokeOrder.length; i++) {
+            if (typeof a.strokeOrder[i].matchPercent !='undefined') {
+                if (a.strokeOrder[i].matchPercent < b.strokeOrder[i].matchPercent) {
+                    return -1;
+                }
+
+                if (a.strokeOrder[i].matchPercent > b.strokeOrder[i].matchPercent) {
+                    return 1;
+                }
+            }
+        }
+        return 0;
+    }
+        
+      
     //display all matched dictionary chars 
-    function showMatchedResults(count) {
+    function showResults(count) {
 
         if (strokeCount == 0)
             return;
 
         var dictOption = $('#dict:checked').val();
         var dictFilePath = 'data/tegaki/' + dictOption + '/' + strokeCount + '.json';
+        
         var charsContainer;
 
         //clear previous recogination data
@@ -367,17 +402,12 @@ $(document).ready(function() {
         
         //get match chars by Stroke Count        
         $.getJSON(dictFilePath, function(data) {
-            
-            // if have stroke count data
-            if (data) {
-                
-                var dictData    =   data;
-                // add more recognization data from next stroke count Chars to try to guess what next data user want to find
-                 var newDictFilePath = 'data/tegaki/' + dictOption + '/' + (strokeCount+1) + '.json';
+
+                var newDictFilePath = 'data/tegaki/' + dictOption + '/' + (strokeCount+1) + '.json';
                 
                  $.getJSON(newDictFilePath, function(nextData) {
-                        dictData    =   dictData.concat(nextData);
-                        
+                        var dictData    =   data.concat(nextData);
+                       
                         var resultData = getMatchChars(dictData);
 
                         charsContainer = $('<div class="row"></div>');
@@ -390,42 +420,6 @@ $(document).ready(function() {
 
                         $('#dictContainer').append(charsContainer);
                  });
-            }
-
-
-        });
-
-    }
-    
-    
-    //display all matched dictionary chars 
-    function showResults(count) {
-
-        if (strokeCount == 0)
-            return;
-
-        var dictOption = $('#dict:checked').val();
-        var dictFilePath = 'data/tegaki/' + dictOption + '/' + strokeCount + '.json';
-        var charsContainer;
-
-        //clear previous recogination data
-        $('#dictContainer').html('');
-        
-        //get match chars by Stroke Count        
-        $.getJSON(dictFilePath, function(data) {
-            
-
-            var resultData = getMatchChars(data);
-
-            charsContainer = $('<div class="row"></div>');
-
-            $.each(resultData, function(index, code) {
-
-                var char = $('<div></div>').attr('class', "col-md-2").html('<span class="btn btn-default" data-button="char" >' + String.fromCharCode(code.code) + '</span>');
-                charsContainer.append(char);
-            });
-
-            $('#dictContainer').append(charsContainer);
     
 
         });
