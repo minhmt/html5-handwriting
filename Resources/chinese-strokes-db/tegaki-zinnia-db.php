@@ -86,73 +86,167 @@ if (!function_exists('mb_html_entity_decode')) {
 }
 
 
-$data=  array();
-$allData    =   array();
-
-$fcontent  = file_get_contents(PUBLICPATH.'handwriting-zh_TW.xml');
-$xml = new SimpleXMLElement($fcontent);
-
-$dict = $xml->xpath('/character-collection/set/character');
-
-$i=0;
-
-while(list( , $char) = each($dict)) {
-   $strokeCount =   count($char->strokes->stroke);
-   $charCode    =   $char->utf8;
-   
-   $strokes_array  =   array();
-   $directions  =   array();
-   $strokes =   $char->strokes->stroke;
-  /*/* process stroke diection ( 4 basic direction first: 
-   *    left to right : 0/1, 
-   *    horizontal/ vertical : 2/3
-   */
-         
-  // process strokes data
-    foreach ($strokes as $stroke) {
-        $stroke_points = $stroke->point;
-        $stroke_points_length = count($stroke_points);
-        $strokes_array[] = $stroke_points_length;
-
-        // get the first point and the last point of the current stroke
-        $firstPoint = $stroke_points[0];
-        $lastPoint = $stroke_points[$stroke_points_length - 1];
-
-        $fPoint['x'] = (int) $firstPoint['x'];
-        $fPoint['y'] = (int) $firstPoint['y'];
-        $lPoint['x'] = (int) $lastPoint['x'];
-        $lPoint['y'] = (int) $lastPoint['y'];
-
-        //stroke direction
-        $directions[] = getDirection($fPoint, $lPoint);
-        
-        //direction D2 =  d (Diagonal) if the stroke include more than two lines
-        if ($stroke_points_length>2) {
-            $directions[count($directions)-1]['d2'] =   'd';
-        }
-        
+function utf8StringToDecimalArray($string) {
+    $nums = array();
+    $convmap = array(0x0, 0xffff, 0, 0xffff);
+    $strlen = mb_strlen($string, "UTF-8");
+    for ($i = 0; $i < $strlen; $i++) {
+        $ch = mb_substr($string, $i, 1, "UTF-8");
+        $nums[] = mb_encode_numericentity($ch, $convmap, 'UTF-8');
     }
-   
-   $char_data   =      array('code' => mb_ord($charCode[0]),
-                      'strokeCount' => $strokeCount,
-                      'strokeOrder' => $strokes_array,
-                      'directions' => $directions
-                        );
-   $data[$strokeCount][]  =  $char_data;
-   $allData[]   =   $char_data;
-   
-   //if ($i>10)  break;
-   $i++;
-   
-//   echo '['.$charCode[0].']';
+    return $nums;
 }
 
-usort($allData, 'sortByStrokeCount');
+function traditionalDict() {
 
-writeTo($allData,'tegaki/traditional/all.json');
+    $data = array();
+    $allData = array();
 
-saveStrokeData($data,'tegaki/traditional');
+    $fcontent = file_get_contents(PUBLICPATH . 'handwriting-zh_TW.xml');
+    $xml = new SimpleXMLElement($fcontent);
 
+    $dict = $xml->xpath('/character-collection/set/character');
+
+    $i = 0;
+
+    while (list(, $char) = each($dict)) {
+        $strokeCount = count($char->strokes->stroke);
+        $charCode = $char->utf8;
+
+        $strokes_array = array();
+        $directions = array();
+        $strokes = $char->strokes->stroke;
+        /* /* process stroke diection ( 4 basic direction first: 
+         *    left to right : 0/1, 
+         *    horizontal/ vertical : 2/3
+         */
+
+        // process strokes data
+        foreach ($strokes as $stroke) {
+            $stroke_points = $stroke->point;
+            $stroke_points_length = count($stroke_points);
+            $strokes_array[] = $stroke_points_length;
+
+            // get the first point and the last point of the current stroke
+            $firstPoint = $stroke_points[0];
+            $lastPoint = $stroke_points[$stroke_points_length - 1];
+
+            $fPoint['x'] = (int) $firstPoint['x'];
+            $fPoint['y'] = (int) $firstPoint['y'];
+            $lPoint['x'] = (int) $lastPoint['x'];
+            $lPoint['y'] = (int) $lastPoint['y'];
+
+            //stroke direction
+            $directions[] = getDirection($fPoint, $lPoint);
+
+            //direction D2 =  d (Diagonal) if the stroke include more than two lines
+            if ($stroke_points_length > 2) {
+                $directions[count($directions) - 1]['d2'] = 'd';
+            }
+        }
+
+        $char_data = array('code' => mb_ord($charCode[0]),
+            'strokeCount' => $strokeCount,
+            'strokeOrder' => $strokes_array,
+            'directions' => $directions
+        );
+        $data[$strokeCount][] = $char_data;
+        $allData[] = $char_data;
+
+        //if ($i>10)  break;
+        $i++;
+
+//   echo '['.$charCode[0].']';
+    }
+
+    usort($allData, 'sortByStrokeCount');
+
+    writeTo($allData, 'tegaki/traditional/all.json');
+
+    saveStrokeData($data, 'tegaki/traditional');
+    
+    echo 'Char numbers:'. count($dict);    
+
+}
+
+
+// Create Simplified Dictionary
+function simplifiedDict() {
+      
+    $data = array();
+    $allData = array();
+
+    $fcontent = file_get_contents(PUBLICPATH . 'handwriting-zh_CN.xml');
+    $xml = new SimpleXMLElement($fcontent);
+
+    $dict = $xml->xpath('/dictionary/character');
+
+    $i = 0;
+
+    while (list(, $char) = each($dict)) {
+        $strokeCount = count($char->strokes->stroke);
+        $charCode = utf8StringToDecimalArray($char->utf8);
+        
+        $charCode   = str_replace(array('&#',';'), '',$charCode);
+   
+        $strokes_array = array();
+        $directions = array();
+        $strokes = $char->strokes->stroke;
+        /* /* process stroke diection ( 4 basic direction first: 
+         *    left to right : 0/1, 
+         *    horizontal/ vertical : 2/3
+         */
+
+        // process strokes data
+        foreach ($strokes as $stroke) {
+            $stroke_points = $stroke->point;
+            $stroke_points_length = count($stroke_points);
+            $strokes_array[] = $stroke_points_length;
+
+            // get the first point and the last point of the current stroke
+            $firstPoint = $stroke_points[0];
+            $lastPoint = $stroke_points[$stroke_points_length - 1];
+
+            $fPoint['x'] = (int) $firstPoint['x'];
+            $fPoint['y'] = (int) $firstPoint['y'];
+            $lPoint['x'] = (int) $lastPoint['x'];
+            $lPoint['y'] = (int) $lastPoint['y'];
+
+            //stroke direction
+            $directions[] = getDirection($fPoint, $lPoint);
+
+            //direction D2 =  d (Diagonal) if the stroke include more than two lines
+            if ($stroke_points_length > 2) {
+                $directions[count($directions) - 1]['d2'] = 'd';
+            }
+        }
+
+        $char_data = array('code' => $charCode[0],
+            'strokeCount' => $strokeCount,
+            'strokeOrder' => $strokes_array,
+            'directions' => $directions
+        );
+        $data[$strokeCount][] = $char_data;
+        $allData[] = $char_data;
+
+        //if ($i>10)  break;
+        $i++;
+
+//   echo '['.$charCode[0].']';
+    }
+
+    usort($allData, 'sortByStrokeCount');
+
+    writeTo($allData, 'tegaki/simplified/all.json');
+
+    saveStrokeData($data, 'tegaki/simplified');
+    
+    echo 'Char numbers:'. count($dict);    
+
+}
+
+// traditionalDict();  // create Traditional Dict Data
+simplifiedDict(); //
 
 
 function sortByStrokeCount($a,$b) {
@@ -222,12 +316,6 @@ function angle($p1,$p2) {
     return $dangle; 
 } 
 
-
-// create JSON format in separate stroke count files
-
-//var_dump($data);
-
-echo 'Char numbers:'. count($dict);
 
 ?>
 
