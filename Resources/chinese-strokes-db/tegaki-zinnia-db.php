@@ -109,24 +109,29 @@ while(list( , $char) = each($dict)) {
    */
          
   // process strokes data
-   foreach ($strokes as $stroke){
-       $stroke_points   =   $stroke->point;
-       $stroke_points_length    =  count($stroke_points); 
-       $strokes_array[]   = $stroke_points_length;
-       
+    foreach ($strokes as $stroke) {
+        $stroke_points = $stroke->point;
+        $stroke_points_length = count($stroke_points);
+        $strokes_array[] = $stroke_points_length;
+
         // get the first point and the last point of the current stroke
-        $firstPoint  =   $stroke_points[0];
-        $lastPoint   =   $stroke_points[$stroke_points_length-1];
-        
+        $firstPoint = $stroke_points[0];
+        $lastPoint = $stroke_points[$stroke_points_length - 1];
+
         $fPoint['x'] = (int) $firstPoint['x'];
         $fPoint['y'] = (int) $firstPoint['y'];
         $lPoint['x'] = (int) $lastPoint['x'];
         $lPoint['y'] = (int) $lastPoint['y'];
 
-        //right -> left / left -> right
-        $directions[]    =   getDirection($fPoint, $lPoint);
-
+        //stroke direction
+        $directions[] = getDirection($fPoint, $lPoint);
+        
+        //direction D2 =  d (Diagonal) if the stroke include more than two lines
+        if ($stroke_points_length>2) {
+            $directions[count($directions)-1]['d2'] =   'd';
         }
+        
+    }
    
    $char_data   =      array('code' => mb_ord($charCode[0]),
                       'strokeCount' => $strokeCount,
@@ -176,8 +181,20 @@ function saveStrokeData($data,$folder) {
     }
 }
 
+// return stroke direction by symbol
+function getDirectionByName($angle) {
+    $angle  =   abs($angle);
+    
+    if ($angle > 75 && $angle < 105) {
+        return 'h'; // Horizontal
+    } else if ($angle < 25 || $angle > 165) {
+        return 'v'; //Vertical
+    } else {
+        return 'd'; //Diagonal = left <-> right
+    }
+}
+    
 //VECTOR MATH functions for stroke direction detect
-
 
 function getDirection($p1, $p2) {
    $angle   =  angle($p1, $p2); 
@@ -190,12 +207,10 @@ function getDirection($p1, $p2) {
         $direction['d1'] = 1; // right to left
     }
 
-   if ($vangle>75 && $vangle<105) {
-       $direction['d2']   =   2; // horizontal
-   } else {
-       $direction['d2']   =   3; //vertical
-   }
-   
+   $direction['d2']    =   getDirectionByName($angle);
+    
+   //stroke angle in degree
+   $direction['a']  =   (int)$angle;
    return $direction;
    
 }
@@ -206,8 +221,6 @@ function angle($p1,$p2) {
     $dangle =   atan2($yDiff, $xDiff) * (180 / pi());
     return $dangle; 
 } 
-
-
 
 
 // create JSON format in separate stroke count files

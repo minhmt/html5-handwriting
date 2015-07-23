@@ -5,8 +5,8 @@ $(document).ready(function() {
     var strokeOrder =   []; // array of stroke points in order
     var radicalCount = 0;
     var searchString = '';
-    var matchRange    =   2;
-    var strokeDirections    =   [];
+    var matchRange    =   1;
+    var strokeDirections    =   []; // array of stroke angle in degrees in (0,0) axis
     
 
     canvas.width = 400;
@@ -78,20 +78,23 @@ $(document).ready(function() {
 
     function getDirection(p1, p2) {
        
-       var vangle  =  Math.abs(angle(p1, p2));
+       var checkAngle   =   angle(p1, p2);
+       
+       console.log('Stroke angle:' +checkAngle + 'o');
+       
+       var vangle  =  Math.abs(checkAngle);
        var direction  = {};
 
-       if (vangle>75 && vangle<105) {
-           direction['d2']   =   3; // horizontal
-       } else {
-           direction['d2']  =   2; //vertical
-       }
-       
+        direction['d2'] =   getDirectionByName(vangle);
+        
         if (p1.x < p2.x) {
             direction['d1'] = 0; // left to right
         } else {
             direction['d1'] = 1; // right to left
         }
+
+        //stroke angle in degree
+       direction['a']    =   checkAngle;
 
        return direction;
     }
@@ -153,6 +156,7 @@ $(document).ready(function() {
         $(canvas).on('mouseup', function() {
             $(canvas).unbind('mousemove').unbind('mouseup')
             corners = [line[0]]
+            
             var n = 0
             var t = 0
             var lastCorner = line[0]
@@ -222,9 +226,14 @@ $(document).ready(function() {
                     c.lineTo(corners[i].x, corners[i].y)
                 }
                 c.fill()
+                
             } else {
+                
                 corners.push(line[line.length - 1])
             }
+
+            //do not process if  just only one point
+            if (corners.length==2 && corners[0]==corners[1]) return ;
 
             c.strokeStyle = 'rgba(0, 0, 255, 0.5)'
             c.beginPath()
@@ -245,7 +254,7 @@ $(document).ready(function() {
             //count when new stroke draw ended
 
 
-        //    console.log(corners);
+       //   console.log(corners);
             
             strokeDirections[strokeCount]   =   getStrokeDirections(corners);
             strokeOrder[strokeCount]    =    corners.length;
@@ -254,8 +263,6 @@ $(document).ready(function() {
             showCounter();
 
             showResults(strokeCount);
-            
-            // console.log(strokeOrder);
             
             console.log(strokeDirections);
 
@@ -282,20 +289,31 @@ $(document).ready(function() {
         var strokePointLength   =   strokePoints.length;
         var firstPoint  =   strokePoints[0];
         var lastPoint   =   strokePoints[strokePointLength-1];
-        
-        var x1  =   firstPoint.x;
-        var y1  =   firstPoint.y;
 
-        var x2  =   lastPoint.x;
-        var y2  =   lastPoint.y;
-        
         var directions  =   {};
         
-         directions  =   getDirection(firstPoint, lastPoint);
+        directions  =   getDirection(firstPoint, lastPoint);
+        // direction D2 = d() if the stroke have more than two lines(>3 points)
+        if (strokePointLength > 2)
+            directions['d2'] = 'd';
         
         return directions;
 
     }
+    
+    // return direction by Symbol
+    function getDirectionByName(angle) {
+        angle   =    Math.abs(angle);
+        
+        if (angle>75 && angle <105) {
+            return 'h';
+        } else if (angle<25 || angle>165) {
+            return 'v';
+        } else {
+            return 'd';
+        }
+    }
+    
 
 
     // get match chars bystroke order
@@ -308,14 +326,14 @@ $(document).ready(function() {
             isMatch =   true;
             
             for (var i=0; i<strokeCount; i++) {
-              
+                
               isMatch   = strokePointsMatch(strokeOrder[i],data.strokeOrder[i] );
-              if(true) {
+              isMatch  =   directionFilter(strokeDirections[i], data.directions[i]);              
+              
+              if(isMatch) {
                     // process stroke points match
                     data.strokeOrder[i] = {'matchPercent': Math.abs(strokeOrder[i] - data.strokeOrder[i])};
                    // add any good Recognition Filter here
-                   isMatch  =   directionFilter(strokeDirections[i], data.directions[i]);
-                    
                } else {
                    isMatch  =   false;
                    break;
@@ -349,31 +367,55 @@ $(document).ready(function() {
              return false;
          }
     }
-//filter by direction    
-//@param data : dictionary Data
+    
+    
+    //filter by direction    
+    //@param data : dictionary Data
     function directionFilter(strokeDirection, dataDirection) {
         var isMatch = false;
-            //horizontal /vertical direction
-            if ((strokeDirection['d2'] != dataDirection['d2'])) {
-                isMatch = false;
-                //right to left
-                if (strokeDirection['d1'] != dataDirection['d1']) {
-                    isMatch = false;
-                } else {
-                    isMatch = true;
-                }
-            }
+
+        isMatch =   (strokeDirection['d2'] == dataDirection['d2']);
+        //horizontal /vertical direction
+        if (strokeDirection['d2']=='d') { // Diagonal
+           isMatch = (strokeDirection['d1'] == dataDirection['d1']); // must have same Diagonal direction
+        }
             
       return isMatch;
     }
     //EOF: Stroke Filters
     
     
-    //compare  matchPercentage of stroke drawing/points
+    //BOF: MATCH SORT FILTERS
     function matchCompare(a, b) {
+
+        // sort by strokeCount , ASC
+        if (a.strokeCount < b.strokeCount) {
+            return -1;
+        } else if (a.strokeCount > b.strokeCount) {
+            return 1;
+        }
+        
+    //sort by direction     
+     for (var i=0; i<strokeCount; i++) {
+         if ( (strokeDirections[i].d2 == a.directions[i].d2 && strokeDirections[i].d2 != b.directions[i].d2) ) {
+             return -1;
+         } else {
+             return 1;
+         }
+         
+         if ( (strokeDirections[i].d1 == a.directions[i].d1 && strokeDirections[i].d1 != b.directions[i].d1) ) {
+             return -1;
+         } else {
+             return 1;
+         }
+         
+     }
+    
+// sort by stroke points match for each Stroke
         for (var i = 0; i < a.strokeOrder.length; i++) {
+
             if (typeof a.strokeOrder[i].matchPercent !='undefined') {
-                if (a.strokeOrder[i].matchPercent < b.strokeOrder[i].matchPercent) {
+                if (a.strokeOrder[i].matchPercent < b.strokeOrder[i].matchPercent ) {
                     return -1;
                 }
 
@@ -382,8 +424,25 @@ $(document).ready(function() {
                 }
             }
         }
+        
+        //sort by stroke angle match, ORDER BY stroke index DESC is a must
+        for (var i=0; i<strokeCount; i++) {
+            
+            var aA  =   Math.abs(strokeDirections[i].a - a.directions[i].a);
+            var bA  =   Math.abs(strokeDirections[i].a - b.directions[i].a);
+            
+            if (aA<bA) {
+                return -1;
+            } else {
+                return 1;
+            }        
+        }        
+        
+       
         return 0;
     }
+    
+    //EOF: MATCH SORT FILTER
         
       
     //display all matched dictionary chars 
