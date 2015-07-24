@@ -5,14 +5,16 @@ $(document).ready(function() {
     var strokeOrder =   []; // array of stroke points in order
     var radicalCount = 0;
     var searchString = '';
-    var matchRange    =   1;
+    var matchRange    =   2;
     var strokeDirections    =   []; // array of stroke angle in degrees in (0,0) axis
+    
+    var debug   =   false; // display debug information, for development only
     
 
     canvas.width = 400;
     canvas.height = 400;
 
-    c = canvas.getContext('2d');
+    context = canvas.getContext('2d');
 
     function getpos(e) {
         var offset = $(canvas).offset()
@@ -140,22 +142,25 @@ $(document).ready(function() {
         $(canvas).on('mousemove', function(e) {
             pos = getpos(e)
 
-            c.beginPath();
-            c.moveTo(prev.x, prev.y);
-            c.lineTo(pos.x, pos.y);
-            c.stroke()
+            context.beginPath();
+            context.lineWidth = 5;
+            context.moveTo(prev.x, prev.y);
+            context.lineTo(pos.x, pos.y);
+            context.stroke();            
 
             prev = pos
             line.push(pos)
 
         })
 
-        c.strokeStyle = "rgba(0,0,0,0.2)"
+        context.strokeStyle = "rgba(0,0,0,0.2)"
 
         //Stroke ENDED 
         $(canvas).on('mouseup', function() {
-            $(canvas).unbind('mousemove').unbind('mouseup')
-            corners = [line[0]]
+            
+            context.closePath();
+            $(canvas).unbind('mousemove').unbind('mouseup');
+            corners = [line[0]];
             
             var n = 0
             var t = 0
@@ -181,7 +186,7 @@ $(document).ready(function() {
             if (len(delta(line[line.length - 1], line[0])) < 25) {
                 corners.push(line[0])
 
-                c.fillStyle = 'rgba(0, 0, 255, 0.3)'
+                context.fillStyle = 'rgba(0, 0, 255, 0.3)'
 
                 if (corners.length == 5) {
                     //check for square
@@ -197,7 +202,7 @@ $(document).ready(function() {
                             && (Math.abs(angle_between(p2p3, p3p4) - Math.PI / 2)) < Math.PI / 6
                             && (Math.abs(angle_between(p3p4, p4p1) - Math.PI / 2)) < Math.PI / 6
                             && (Math.abs(angle_between(p4p1, p1p2) - Math.PI / 2)) < Math.PI / 6) {
-                        c.fillStyle = 'rgba(0, 255, 255, 0.3)'
+                        context.fillStyle = 'rgba(0, 255, 255, 0.3)'
                         var p1p3 = delta(p1, p3)
                         var p2p4 = delta(p2, p4)
 
@@ -219,13 +224,15 @@ $(document).ready(function() {
 
 
                 }
+            
+                context.lineWidth = 1;
 
-                c.beginPath()
-                c.moveTo(corners[0].x, corners[0].y)
+                context.beginPath()
+                context.moveTo(corners[0].x, corners[0].y)
                 for (var i = 1; i < corners.length; i++) {
                     c.lineTo(corners[i].x, corners[i].y)
                 }
-                c.fill()
+                context.fill()
                 
             } else {
                 
@@ -235,27 +242,30 @@ $(document).ready(function() {
             //do not process if  just only one point
             if (corners.length==2 && corners[0]==corners[1]) return ;
 
-            c.strokeStyle = 'rgba(0, 0, 255, 0.5)'
-            c.beginPath()
-            c.moveTo(corners[0].x, corners[0].y)
-            for (var i = 1; i < corners.length; i++) {
-                c.lineTo(corners[i].x, corners[i].y)
-            }
-            c.stroke()
+
+            if (debug)  {
+                //draw stroke lines
+                context.lineWidth = 1;                
+                context.strokeStyle = 'rgba(0, 0, 255, 0.5)'
+                context.beginPath()
+                context.moveTo(corners[0].x, corners[0].y)
+                for (var i = 1; i < corners.length; i++) {
+                    context.lineTo(corners[i].x, corners[i].y)
+                }
+                context.stroke()
 
 
-            c.fillStyle = 'rgba(255, 0, 0, 0.5)'
-            for (var i = 0; i < corners.length; i++) {
-                c.beginPath()
-                c.arc(corners[i].x, corners[i].y, 4, 0, 2 * Math.PI, false)
-                c.fill()
+                context.fillStyle = 'rgba(255, 0, 0, 0.5)'
+                for (var i = 0; i < corners.length; i++) {
+                    context.beginPath()
+                    context.arc(corners[i].x, corners[i].y, 4, 0, 2 * Math.PI, false)
+                    context.fill()
+                }
             }
 
             //count when new stroke draw ended
 
 
-       //   console.log(corners);
-            
             strokeDirections[strokeCount]   =   getStrokeDirections(corners);
             strokeOrder[strokeCount]    =    corners.length;
             
@@ -328,11 +338,13 @@ $(document).ready(function() {
             for (var i=0; i<strokeCount; i++) {
                 
               isMatch   = strokePointsMatch(strokeOrder[i],data.strokeOrder[i] );
-              isMatch  =   directionFilter(strokeDirections[i], data.directions[i]);              
+                // add new filer here like bellow case
+                if (isMatch)
+                  isMatch = directionFilter(strokeDirections[i], data.directions[i]);              
               
               if(isMatch) {
                     // process stroke points match
-                    data.strokeOrder[i] = {'matchPercent': Math.abs(strokeOrder[i] - data.strokeOrder[i])};
+                    data.strokeOrder[i].matchPercent = Math.abs(strokeOrder[i] - data.strokeOrder[i]);
                    // add any good Recognition Filter here
                } else {
                    isMatch  =   false;
@@ -374,11 +386,14 @@ $(document).ready(function() {
     function directionFilter(strokeDirection, dataDirection) {
         var isMatch = false;
 
-        isMatch =   (strokeDirection['d2'] == dataDirection['d2']);
-        //horizontal /vertical direction
-        if (strokeDirection['d2']=='d') { // Diagonal
-           isMatch = (strokeDirection['d1'] == dataDirection['d1']); // must have same Diagonal direction
-        }
+        isMatch =  ( (strokeDirection.d2=='d' || strokeDirection.d2=='h') && (dataDirection.d2=='d' || dataDirection.d2=='h' ) ) || (strokeDirection.d2 == dataDirection.d2);
+        
+        if (isMatch) {
+            //horizontal /vertical direction
+            if (dataDirection['d2']=='d' ) { // Diagonal
+               isMatch = (strokeDirection['d1'] == dataDirection['d1']); // must have same Diagonal direction
+            }
+        } 
             
       return isMatch;
     }
@@ -397,16 +412,22 @@ $(document).ready(function() {
         
     //sort by direction     
      for (var i=0; i<strokeCount; i++) {
+         // horizontal/ vertical first
          if ( (strokeDirections[i].d2 == a.directions[i].d2 && strokeDirections[i].d2 != b.directions[i].d2) ) {
              return -1;
          } else {
              return 1;
          }
          
-         if ( (strokeDirections[i].d1 == a.directions[i].d1 && strokeDirections[i].d1 != b.directions[i].d1) ) {
-             return -1;
+         //Diagonal next
+         if (strokeDirections[i].d2!='d') {
+            if ( (strokeDirections[i].d1 == a.directions[i].d1 && strokeDirections[i].d1 != b.directions[i].d1) ) {
+                return -1;
+            } else {
+                return 1;
+            }
          } else {
-             return 1;
+             
          }
          
      }
@@ -446,13 +467,15 @@ $(document).ready(function() {
         
       
     //display all matched dictionary chars 
-    function showResults(count) {
+    function showResults() {
 
         if (strokeCount == 0)
             return;
 
         var dictOption = $('#dict:checked').val();
         var dictFilePath = 'data/tegaki/' + dictOption + '/' + strokeCount + '.json';
+        
+//        console.log('using dictionary DB:' + dictFilePath);
         
         var charsContainer;
 
@@ -501,8 +524,8 @@ $(document).ready(function() {
 
 
     //dictionary type changed
-    $("#dict").change(function() {
-        showResults(strokeCount);
+    $("input[type=radio][name=dict]").on('change',function() {
+        showResults();
     });
 
     //Clear Canvas Content
@@ -514,7 +537,8 @@ $(document).ready(function() {
 
 
     function clearStrokes() {
-        c.clearRect(0, 0, canvas.width, canvas.height);
+        context.lineWidth = 1;        
+        context.clearRect(0, 0, canvas.width, canvas.height);
         drawAxisLines();
         
         //clear previous recogination data
