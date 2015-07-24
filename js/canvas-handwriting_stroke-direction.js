@@ -416,12 +416,18 @@ $(document).ready(function() {
          if ( (strokeDirections[i].d2 == a.directions[i].d2 && strokeDirections[i].d2 != b.directions[i].d2) ) {
              return -1;
          } else {
-                //Diagonal next
-                if ((strokeDirections[i].d1 == a.directions[i].d1 && strokeDirections[i].d1 != b.directions[i].d1)) {
-                    return -1;
-                } else {
-                    return 1;
-                }
+             return 1;
+         }
+         
+         //Diagonal next
+         if (strokeDirections[i].d2!='d') {
+            if ( (strokeDirections[i].d1 == a.directions[i].d1 && strokeDirections[i].d1 != b.directions[i].d1) ) {
+                return -1;
+            } else {
+                return 1;
+            }
+         } else {
+             
          }
          
      }
