@@ -426,7 +426,7 @@ $(document).ready(function() {
          
      }
     
-// sort by stroke points match for each Stroke
+        // sort by stroke points match for each Stroke
         for (var i = 0; i < a.strokeOrder.length; i++) {
 
             if (typeof a.strokeOrder[i].matchPercent !='undefined') {
@@ -479,7 +479,7 @@ $(document).ready(function() {
         //get match chars by Stroke Count        
         $.getJSON(dictFilePath, function(data) {
 
-                var newDictFilePath = 'data/tegaki/' + dictOption + '/' + (strokeCount+1) + '.json';
+                var newDictFilePath = 'hwdata/tegaki/' + dictOption + '/' + (strokeCount+1) + '.json';
                 
                  $.getJSON(newDictFilePath, function(nextData) {
                         var dictData    =   data.concat(nextData);
