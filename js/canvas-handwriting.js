@@ -1,6 +1,9 @@
-$(document).ready(function() {
+(function ( $ ) {
 
-    var canvas = document.getElementById('handwriting-canvas');
+    var canvasID; // ID of recognizer Canvas
+    var dictContainer; // results container ID
+    var canvas; //Handwriting Canvas DOM element
+    var context; // Canvas Context
     var strokeCount = 0;
     var strokeOrder =   []; // array of stroke points in order
     var radicalCount = 0;
@@ -10,12 +13,241 @@ $(document).ready(function() {
     
     var debug   =   false; // display debug information, for development only
     
+    var resultsPerRow   =   5; // number of chars per rows displayed on match results
+    
 
-    canvas.width = 400;
-    canvas.height = 400;
+    //setup handwriting recognizer
+    this.init   =   function (settings) {
+        
+        if (debug)
+            console.log('Handwriting recognizer init..');
+        
+        canvasID    =    settings.canvasID;
+        dictContainer  =   settings.resultsDiv;
+        resultsPerRow   =   settings.resultsPerRow;
+        
+        canvas = document.getElementById(canvasID);
+        canvas.width = settings.width;
+        canvas.height = settings.height;
 
-    context = canvas.getContext('2d');
+        context = canvas.getContext('2d');
+        
 
+        colors = ['rgba(255,0,0,0.5)',
+            'rgba(0,255,0,0.5)',
+            'rgba(0,0,255,0.5)',
+            'rgba(200,200,0,0.5)',
+        ];
+        
+       
+        drawAxisLines();
+        
+        addMouseSupport();
+        
+        addTouchSupport();
+        
+        addButtonsControler();
+        
+    }
+    
+    this.addButtonsControler    =   function() {
+        
+    //add selected char to Search field
+        $("#dictContainer").on('mouseup touchend', "[data-button='char']", function(e) {
+            e.preventDefault();
+            searchString += $(this).html();
+            $("#searchText").val(searchString);
+        });
+
+
+        //do Search
+        $('#btnSearch').on('mouseup', function() {
+            $("#searchText").val('');
+            clearStrokes();
+        });
+
+
+        //dictionary type changed
+        $("input[type=radio][name=dict]").on('change', function() {
+            showResults();
+        });
+
+        //Clear Canvas Content
+        $('#clear').click(function() {
+            clearStrokes();
+            showCounter();
+
+        })
+
+    }
+    
+    this.addTouchSupport  =    function(){
+        //BOF: TOUCH SUPPORT
+        var mc = new Hammer.Manager(canvas);
+        var pan = new Hammer.Pan({direction: Hammer.DIRECTION_ALL});
+        mc.add(pan);
+
+        mc.on("panstart", function(e) {
+            //   console.log(e);
+
+        });
+        //EOF:  TOUCH SUsPPORT
+    }
+    
+    this.addMouseSupport    =   function () {
+        
+        // Mouse Down
+        $(canvas).on('mousedown', function(e) {
+            prev = getpos(e)
+            line = [prev]
+
+
+            $(canvas).on('mousemove', function(e) {
+                pos = getpos(e)
+
+                context.beginPath();
+                context.lineWidth = 5;
+                context.moveTo(prev.x, prev.y);
+                context.lineTo(pos.x, pos.y);
+                context.stroke();
+
+                prev = pos
+                line.push(pos)
+
+            })
+
+            context.strokeStyle = "rgba(0,0,0,0.2)"
+
+            //Stroke ENDED 
+            $(canvas).on('mouseup', function() {
+
+                context.closePath();
+                $(canvas).unbind('mousemove').unbind('mouseup');
+                corners = [line[0]];
+
+                var n = 0
+                var t = 0
+                var lastCorner = line[0]
+                for (var i = 1; i < line.length - 2; i++) {
+
+                    var pt = line[i + 1]
+                    var d = delta(lastCorner, line[i - 1])
+
+                    if (len(d) > 20 && n > 2) {
+                        ac = delta(line[i - 1], pt)
+                        if (Math.abs(angle_between(ac, d)) > Math.PI / 4) {
+                            pt.index = i
+                            corners.push(pt)
+                            lastCorner = pt
+                            n = 0
+                            t = 0
+                        }
+                    }
+                    n++
+                }
+
+                if (len(delta(line[line.length - 1], line[0])) < 25) {
+                    corners.push(line[0])
+
+                    context.fillStyle = 'rgba(0, 0, 255, 0.3)'
+
+                    if (corners.length == 5) {
+                        //check for square
+                        var p1 = corners[0]
+                        var p2 = corners[1]
+                        var p3 = corners[2]
+                        var p4 = corners[3]
+                        var p1p2 = delta(p1, p2)
+                        var p2p3 = delta(p2, p3)
+                        var p3p4 = delta(p3, p4)
+                        var p4p1 = delta(p4, p1)
+                        if ((Math.abs(angle_between(p1p2, p2p3) - Math.PI / 2)) < Math.PI / 6
+                                && (Math.abs(angle_between(p2p3, p3p4) - Math.PI / 2)) < Math.PI / 6
+                                && (Math.abs(angle_between(p3p4, p4p1) - Math.PI / 2)) < Math.PI / 6
+                                && (Math.abs(angle_between(p4p1, p1p2) - Math.PI / 2)) < Math.PI / 6) {
+                            context.fillStyle = 'rgba(0, 255, 255, 0.3)'
+                            var p1p3 = delta(p1, p3)
+                            var p2p4 = delta(p2, p4)
+
+                            var diag = (len(p1p3) + len(p2p4)) / 4.0
+
+                            var tocenter1 = scale(unit(p1p3), -diag)
+                            var tocenter2 = scale(unit(p2p4), -diag)
+
+                            var center = average([p1, p2, p3, p4])
+
+                            var angle = angle_between(p1p3, p2p4)
+
+                            corners = [add(center, tocenter1),
+                                add(center, tocenter2),
+                                add(center, scale(tocenter1, -1)),
+                                add(center, scale(tocenter2, -1)),
+                                add(center, tocenter1)]
+                        }
+
+
+                    }
+
+                    context.lineWidth = 1;
+
+                    context.beginPath()
+                    context.moveTo(corners[0].x, corners[0].y)
+                    for (var i = 1; i < corners.length; i++) {
+                        c.lineTo(corners[i].x, corners[i].y)
+                    }
+                    context.fill()
+
+                } else {
+
+                    corners.push(line[line.length - 1])
+                }
+
+                //do not process if  just only one point
+                if (corners.length == 2 && corners[0] == corners[1])
+                    return;
+
+
+                if (debug) {
+                    //draw stroke lines
+                    context.lineWidth = 1;
+                    context.strokeStyle = 'rgba(0, 0, 255, 0.5)'
+                    context.beginPath()
+                    context.moveTo(corners[0].x, corners[0].y)
+                    for (var i = 1; i < corners.length; i++) {
+                        context.lineTo(corners[i].x, corners[i].y)
+                    }
+                    context.stroke()
+
+
+                    context.fillStyle = 'rgba(255, 0, 0, 0.5)'
+                    for (var i = 0; i < corners.length; i++) {
+                        context.beginPath()
+                        context.arc(corners[i].x, corners[i].y, 4, 0, 2 * Math.PI, false)
+                        context.fill()
+                    }
+                }
+
+                //count when new stroke draw ended
+
+
+                strokeDirections[strokeCount] = getStrokeDirections(corners);
+                strokeOrder[strokeCount] = corners.length;
+
+                strokeCount++;
+                showCounter();
+
+                showResults(strokeCount);
+
+                console.log(strokeDirections);
+
+            })
+
+        })
+    
+    }
+        
+    
+    
     function getpos(e) {
         var offset = $(canvas).offset()
         return {
@@ -23,12 +255,6 @@ $(document).ready(function() {
             y: e.pageY - offset.top,
         }
     }
-
-    colors = ['rgba(255,0,0,0.5)',
-        'rgba(0,255,0,0.5)',
-        'rgba(0,0,255,0.5)',
-        'rgba(200,200,0,0.5)',
-    ]
 
     function vector(x, y) {
         return {
@@ -113,7 +339,6 @@ $(document).ready(function() {
     
     // draw Axis Lines
     function drawAxisLines() {
-      var context   =    canvas.getContext('2d');
       context.setLineDash([1,5]);      
 
       context.beginPath();
@@ -128,170 +353,8 @@ $(document).ready(function() {
       
       context.setLineDash([3,0]);      
       
-      
     }
 
-    drawAxisLines();
-    
-    // Mouse Down
-    $(canvas).on('mousedown', function(e) {
-        prev = getpos(e)
-        line = [prev]
-
-
-        $(canvas).on('mousemove', function(e) {
-            pos = getpos(e)
-
-            context.beginPath();
-            context.lineWidth = 5;
-            context.moveTo(prev.x, prev.y);
-            context.lineTo(pos.x, pos.y);
-            context.stroke();            
-
-            prev = pos
-            line.push(pos)
-
-        })
-
-        context.strokeStyle = "rgba(0,0,0,0.2)"
-
-        //Stroke ENDED 
-        $(canvas).on('mouseup', function() {
-            
-            context.closePath();
-            $(canvas).unbind('mousemove').unbind('mouseup');
-            corners = [line[0]];
-            
-            var n = 0
-            var t = 0
-            var lastCorner = line[0]
-            for (var i = 1; i < line.length - 2; i++) {
-
-                var pt = line[i + 1]
-                var d = delta(lastCorner, line[i - 1])
-
-                if (len(d) > 20 && n > 2) {
-                    ac = delta(line[i - 1], pt)
-                    if (Math.abs(angle_between(ac, d)) > Math.PI / 4) {
-                        pt.index = i
-                        corners.push(pt)
-                        lastCorner = pt
-                        n = 0
-                        t = 0
-                    }
-                }
-                n++
-            }
-
-            if (len(delta(line[line.length - 1], line[0])) < 25) {
-                corners.push(line[0])
-
-                context.fillStyle = 'rgba(0, 0, 255, 0.3)'
-
-                if (corners.length == 5) {
-                    //check for square
-                    var p1 = corners[0]
-                    var p2 = corners[1]
-                    var p3 = corners[2]
-                    var p4 = corners[3]
-                    var p1p2 = delta(p1, p2)
-                    var p2p3 = delta(p2, p3)
-                    var p3p4 = delta(p3, p4)
-                    var p4p1 = delta(p4, p1)
-                    if ((Math.abs(angle_between(p1p2, p2p3) - Math.PI / 2)) < Math.PI / 6
-                            && (Math.abs(angle_between(p2p3, p3p4) - Math.PI / 2)) < Math.PI / 6
-                            && (Math.abs(angle_between(p3p4, p4p1) - Math.PI / 2)) < Math.PI / 6
-                            && (Math.abs(angle_between(p4p1, p1p2) - Math.PI / 2)) < Math.PI / 6) {
-                        context.fillStyle = 'rgba(0, 255, 255, 0.3)'
-                        var p1p3 = delta(p1, p3)
-                        var p2p4 = delta(p2, p4)
-
-                        var diag = (len(p1p3) + len(p2p4)) / 4.0
-
-                        var tocenter1 = scale(unit(p1p3), -diag)
-                        var tocenter2 = scale(unit(p2p4), -diag)
-
-                        var center = average([p1, p2, p3, p4])
-
-                        var angle = angle_between(p1p3, p2p4)
-
-                        corners = [add(center, tocenter1),
-                            add(center, tocenter2),
-                            add(center, scale(tocenter1, -1)),
-                            add(center, scale(tocenter2, -1)),
-                            add(center, tocenter1)]
-                    }
-
-
-                }
-            
-                context.lineWidth = 1;
-
-                context.beginPath()
-                context.moveTo(corners[0].x, corners[0].y)
-                for (var i = 1; i < corners.length; i++) {
-                    c.lineTo(corners[i].x, corners[i].y)
-                }
-                context.fill()
-                
-            } else {
-                
-                corners.push(line[line.length - 1])
-            }
-
-            //do not process if  just only one point
-            if (corners.length==2 && corners[0]==corners[1]) return ;
-
-
-            if (debug)  {
-                //draw stroke lines
-                context.lineWidth = 1;                
-                context.strokeStyle = 'rgba(0, 0, 255, 0.5)'
-                context.beginPath()
-                context.moveTo(corners[0].x, corners[0].y)
-                for (var i = 1; i < corners.length; i++) {
-                    context.lineTo(corners[i].x, corners[i].y)
-                }
-                context.stroke()
-
-
-                context.fillStyle = 'rgba(255, 0, 0, 0.5)'
-                for (var i = 0; i < corners.length; i++) {
-                    context.beginPath()
-                    context.arc(corners[i].x, corners[i].y, 4, 0, 2 * Math.PI, false)
-                    context.fill()
-                }
-            }
-
-            //count when new stroke draw ended
-
-
-            strokeDirections[strokeCount]   =   getStrokeDirections(corners);
-            strokeOrder[strokeCount]    =    corners.length;
-            
-            strokeCount++;            
-            showCounter();
-
-            showResults(strokeCount);
-            
-            console.log(strokeDirections);
-
-        })
-        
-    })
-
-    
-
-    //BOF: TOUCH SUPPORT
-    var mc = new Hammer.Manager(canvas);
-    var pan = new Hammer.Pan({direction: Hammer.DIRECTION_ALL});
-    mc.add(pan);
-
-    mc.on("panstart", function(e) {
-     //   console.log(e);
-
-    });
-    //EOF:  TOUCH SUsPPORT
 
     // get stroke directions
     function getStrokeDirections(strokePoints) {
@@ -467,14 +530,14 @@ $(document).ready(function() {
             return;
 
         var dictOption = $('#dict:checked').val();
-        var dictFilePath = 'data/tegaki/' + dictOption + '/' + strokeCount + '.json';
+        var dictFilePath = 'hwdata/tegaki/' + dictOption + '/' + strokeCount + '.json';
         
 //        console.log('using dictionary DB:' + dictFilePath);
         
         var charsContainer;
 
         //clear previous recogination data
-        $('#dictContainer').html('');
+        $('#'+dictContainer).html('');
         
         //get match chars by Stroke Count        
         $.getJSON(dictFilePath, function(data) {
@@ -494,40 +557,13 @@ $(document).ready(function() {
                             charsContainer.append(char);
                         });
 
-                        $('#dictContainer').append(charsContainer);
+                        $('#'+dictContainer).append(charsContainer);
                  });
     
 
         });
 
     }
-
-    //add selected char to Search field
-    $("#dictContainer").on('mouseup touchend', "[data-button='char']", function(e) {
-        e.preventDefault();
-        searchString += $(this).html();
-        $("#searchText").val(searchString);
-    });
-
-
-    //do Search
-    $('#btnSearch').on('mouseup', function() {
-        $("#searchText").val('');
-        clearStrokes();
-    });
-
-
-    //dictionary type changed
-    $("input[type=radio][name=dict]").on('change',function() {
-        showResults();
-    });
-
-    //Clear Canvas Content
-    $('#clear').click(function() {
-        clearStrokes();
-        showCounter();
-
-    })
 
 
     function clearStrokes() {
@@ -536,7 +572,7 @@ $(document).ready(function() {
         drawAxisLines();
         
         //clear previous recogination data
-        $('#dictContainer').html('');
+        $('#'+dictContainer).html('');
 
         strokeCount = 0;
         strokeOrder =   [];
@@ -546,9 +582,32 @@ $(document).ready(function() {
     }
 
     function showCounter() {
-        $('#counter').show();
-        $('#strokeCount').html('Stroke Count: ' + strokeCount).show();
-        $('#radicalCount').html('Radical Count: ' + radicalCount).show();
+        if (debug) {
+            $('#counter').show();
+            $('#strokeCount').html('Stroke Count: ' + strokeCount).show();
+            $('#radicalCount').html('Radical Count: ' + radicalCount).show();
+        }
     }
+    
+    
+    //
+     $.fn.handwriting = function( options ) {
+ 
+        // This is the easiest way to have default options.
+        var settings = $.extend({
+            // These are the defaults.
+            canvasID: 'handwriting-canvas',
+            resultsDiv: 'dictContainer',
+            resultsPerRow: 5, // numer of match chars per row in display results
+            width:  400,
+            height: 400
+        }, options );
+        
+      return  this.each( function() {
+            init(settings);
+       });
 
-})
+ 
+    };
+
+}( jQuery ));

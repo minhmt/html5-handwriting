@@ -11,8 +11,8 @@
 
         <link rel="stylesheet" href="css/handwriting.css">
 
-
         <script  type="text/javascript" charset="utf-8" src="js/canvas-handwriting.js"> </script>
+ 
     </head>
     <body>
         <div class="container">
@@ -50,6 +50,12 @@
                 <div id="dictContainer"></div>
             </div>
         </div>
+
+       <script>            
+            $(document).ready(function() {
+                $('#drawContainer').handwriting({canvasID: 'handwriting-canvas'});
+            });            
+        </script>
     </body>
 
 </html>
