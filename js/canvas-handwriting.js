@@ -53,7 +53,7 @@
     this.addButtonsControler    =   function() {
         
     //add selected char to Search field
-        $("#dictContainer").on('mouseup touchend', "[data-button='char']", function(e) {
+        $('#'+dictContainer).on('mouseup touchend', "[data-button='char']", function(e) {
             e.preventDefault();
             searchString += $(this).html();
             $("#searchText").val(searchString);
@@ -193,7 +193,7 @@
                     context.beginPath()
                     context.moveTo(corners[0].x, corners[0].y)
                     for (var i = 1; i < corners.length; i++) {
-                        c.lineTo(corners[i].x, corners[i].y)
+                        context.lineTo(corners[i].x, corners[i].y)
                     }
                     context.fill()
 
