@@ -11,9 +11,12 @@
     var matchRange    =   2;
     var strokeDirections    =   []; // array of stroke angle in degrees in (0,0) axis
     
-    var debug   =   false; // display debug information, for development only
+    var debug   =   true; // display debug information, for development only
     
     var resultsPerRow   =   5; // number of chars per rows displayed on match results
+
+    var prevPoint; // previous draw point position
+    var strokeLines; // array of points on stroke lines
     
 
     //setup handwriting recognizer
@@ -27,6 +30,10 @@
         resultsPerRow   =   settings.resultsPerRow;
         
         canvas = document.getElementById(canvasID);
+       
+        if (typeof(canvas) =='undefined') 
+            return false;
+        
         canvas.width = settings.width;
         canvas.height = settings.height;
 
@@ -80,61 +87,92 @@
         })
 
     }
+
+    //BOF: STROKES DRAWING
+    this.startStroke	=	function() {
+
+    }
+
+    this.drawStroke	=	function() {
+
+    }
+
+    this.stopStroke	=	function() {
+
+
+    }
+
+
+    //EOF: STROKES DRAWING
     
     this.addTouchSupport  =    function(){
         //BOF: TOUCH SUPPORT
         var mc = new Hammer.Manager(canvas);
-        var pan = new Hammer.Pan({direction: Hammer.DIRECTION_ALL});
-        mc.add(pan);
+        var swipe = new Hammer.Swipe({direction: Hammer.DIRECTION_ALL, threshold: 50, velocity: 2});
+        mc.add(swipe);
 
-        mc.on("panstart", function(e) {
-            //   console.log(e);
+        // handle swipe event
+        mc.on('swipe', function () {
+
+            clearStrokes();
 
         });
+
+
         //EOF:  TOUCH SUsPPORT
     }
     
+
+
     this.addMouseSupport    =   function () {
         
-        // Mouse Down
-        $(canvas).on('mousedown', function(e) {
-            prev = getpos(e)
-            line = [prev]
+        $(canvas).on('mouseout touchleave', function(e) {
+        	console.log('Mouse OUt...');
+
+        	//context.closePath();
+            //$(canvas).unbind('mousemove touchmove').unbind('mouseup touchup');
+
+        });
+
+        // Mouse Down/ Touch Down
+        $(canvas).on('mousedown touchend', function(e) {
+            prevPoint = getpos(e)
+            strokeLines = [prevPoint]
 
 
-            $(canvas).on('mousemove', function(e) {
+            $(canvas).on('mousemove touchmove', function(e) {
                 pos = getpos(e)
 
                 context.beginPath();
                 context.lineWidth = 5;
-                context.moveTo(prev.x, prev.y);
+                context.moveTo(prevPoint.x, prevPoint.y);
                 context.lineTo(pos.x, pos.y);
                 context.stroke();
 
-                prev = pos
-                line.push(pos)
+                prevPoint = pos
+                strokeLines.push(pos)
 
             })
 
             context.strokeStyle = "rgba(0,0,0,0.2)"
 
             //Stroke ENDED 
-            $(canvas).on('mouseup', function() {
+            $(canvas).on('mouseup touchup', function() {
 
                 context.closePath();
-                $(canvas).unbind('mousemove').unbind('mouseup');
-                corners = [line[0]];
+                $(canvas).unbind('mousemove touchmove').unbind('mouseup touchup');
+                corners = [strokeLines[0]];
 
                 var n = 0
                 var t = 0
-                var lastCorner = line[0]
-                for (var i = 1; i < line.length - 2; i++) {
+                var lastCorner = strokeLines[0]
+                for (var i = 1; i < strokeLines.length - 2; i++) {
 
-                    var pt = line[i + 1]
-                    var d = delta(lastCorner, line[i - 1])
+                    var pt = strokeLines[i + 1]
+                    var d = delta(lastCorner, strokeLines[i - 1])
 
                     if (len(d) > 20 && n > 2) {
-                        ac = delta(line[i - 1], pt)
+                        ac = delta(strokeLines[i - 1], pt)
                         if (Math.abs(angle_between(ac, d)) > Math.PI / 4) {
                             pt.index = i
                             corners.push(pt)
@@ -146,8 +184,8 @@
                     n++
                 }
 
-                if (len(delta(line[line.length - 1], line[0])) < 25) {
-                    corners.push(line[0])
+                if (len(delta(strokeLines[strokeLines.length - 1], strokeLines[0])) < 25) {
+                    corners.push(strokeLines[0])
 
                     context.fillStyle = 'rgba(0, 0, 255, 0.3)'
 
@@ -199,7 +237,7 @@
 
                 } else {
 
-                    corners.push(line[line.length - 1])
+                    corners.push(strokeLines[strokeLines.length - 1])
                 }
 
                 //do not process if  just only one point
@@ -238,7 +276,7 @@
 
                 showResults(strokeCount);
 
-                console.log(strokeDirections);
+     //           console.log(strokeDirections);
 
             })
 
@@ -254,6 +292,17 @@
             x: e.pageX - offset.left,
             y: e.pageY - offset.top,
         }
+    }
+
+    function getTouchPos(e) {
+    	var offset	=	$(canvas).offset;
+
+    	return {
+    		x: e.pageX - offset.left,
+            y: e.pageY - offset.top,
+    	}
+
+
     }
 
     function vector(x, y) {
@@ -424,7 +473,7 @@
         if (matchData.length > 0)
             matchData.sort(matchCompare);
         
-        console.log(matchData);
+   //     console.log(matchData);
         
         
         return matchData;
@@ -553,7 +602,10 @@
 
                         $.each(resultData, function(index, code) {
 
-                            var char = $('<div></div>').attr('class', "col-md-2").html('<span class="btn btn-default" data-button="char" >' + String.fromCharCode(code.code) + '</span>');
+                            var char = $('<div></div>').attr('class', "col-md-2");
+                            var charText	=	'<span class="btn btn-default" data-button="char" >' + String.fromCharCode(code.code) + '</span>';
+                            char.append(charText);
+
                             charsContainer.append(char);
                         });
 
@@ -567,12 +619,18 @@
 
 
     function clearStrokes() {
+
+
         context.lineWidth = 1;        
         context.clearRect(0, 0, canvas.width, canvas.height);
+        //redraw axis lines
         drawAxisLines();
         
         //clear previous recogination data
         $('#'+dictContainer).html('');
+
+        prevPoint 	=	null;
+        strokeLines    =	[];
 
         strokeCount = 0;
         strokeOrder =   [];
