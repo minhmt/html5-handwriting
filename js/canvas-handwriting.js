@@ -13,6 +13,7 @@
     var searchTextId =   'searchText';
     var dictCharId  =   'dictchar';
     var clearButtonId   =   'clear';
+    var btnSearchId =   'btnSearch';
     
     var lookupDictType  =   'simplified'; // type of look up dictionary (Traditional /Simplified)
     
@@ -37,6 +38,7 @@
         searchTextId    =   settings.searchTextId;
         dictCharId   =  settings.dictCharId;
         lookupDictType  =   settings.dictType;
+        btnSearchId =   settings.btnSearchId;
         
         
         
@@ -71,7 +73,7 @@
     this.addButtonsControler    =   function() {
         
     //add selected char to Search field
-        $('#'+dictContainer).on('mouseup touchend', "[data-button='" + dictCharId + "']", function(e) {
+        $('#'+dictContainer).on('click touchend', "[data-button='" + dictCharId + "']", function(e) {
             e.preventDefault();
             searchString += $(this).html();
             $('#'+searchTextId).val(searchString);
@@ -79,10 +81,13 @@
 
 
         //do Search
-        $('#btnSearch').on('mouseup', function() {
+        $('#'+ btnSearchId).on('click touchstart', function() {
             $('#'+searchTextId).val('');
+            searchString        =   '';
             clearStrokes();
         });
+        
+        
 
 
         //dictionary type changed
@@ -100,6 +105,11 @@
 
     }
 
+    this.resetResults   =   function() {
+        //clear previous recogination data
+        $('#'+dictContainer).html('');
+
+    }
     //BOF: STROKES DRAWING
     this.startStroke	=	function() {
 
@@ -598,7 +608,7 @@
         var charsContainer;
 
         //clear previous recogination data
-        $('#'+dictContainer).html('');
+        resetResults();
         
         //get match chars by Stroke Count        
         $.getJSON(dictFilePath, function(data) {
@@ -637,9 +647,8 @@
         context.clearRect(0, 0, canvas.width, canvas.height);
         //redraw axis lines
         drawAxisLines();
-        
-        //clear previous recogination data
-        $('#'+dictContainer).html('');
+
+        resetResults();
 
         prevPoint 	=	null;
         strokeLines    =	[];
@@ -673,7 +682,8 @@
             height: 400,
             dictType:   'simplified',
             searchTextId: searchTextId,
-            dictCharId:  dictCharId
+            dictCharId:  dictCharId,
+            btnSearchId: 'btnSearch'
             
         }, options );
         
