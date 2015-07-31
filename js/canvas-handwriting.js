@@ -10,7 +10,13 @@
     var searchString = '';
     var matchRange    =   2;
     var strokeDirections    =   []; // array of stroke angle in degrees in (0,0) axis
+    var searchTextId =   'searchText';
+    var dictCharId  =   'dictchar';
+    var clearButtonId   =   'clear';
     
+    var lookupDictType  =   'simplified'; // type of look up dictionary (Traditional /Simplified)
+    
+        
     var debug   =   true; // display debug information, for development only
     
     var resultsPerRow   =   5; // number of chars per rows displayed on match results
@@ -28,6 +34,11 @@
         canvasID    =    settings.canvasID;
         dictContainer  =   settings.resultsDiv;
         resultsPerRow   =   settings.resultsPerRow;
+        searchTextId    =   settings.searchTextId;
+        dictCharId   =  settings.dictCharId;
+        lookupDictType  =   settings.dictType;
+        
+        
         
         canvas = document.getElementById(canvasID);
        
@@ -60,27 +71,28 @@
     this.addButtonsControler    =   function() {
         
     //add selected char to Search field
-        $('#'+dictContainer).on('mouseup touchend', "[data-button='char']", function(e) {
+        $('#'+dictContainer).on('mouseup touchend', "[data-button='" + dictCharId + "']", function(e) {
             e.preventDefault();
             searchString += $(this).html();
-            $("#searchText").val(searchString);
+            $('#'+searchTextId).val(searchString);
         });
 
 
         //do Search
         $('#btnSearch').on('mouseup', function() {
-            $("#searchText").val('');
+            $('#'+searchTextId).val('');
             clearStrokes();
         });
 
 
         //dictionary type changed
         $("input[type=radio][name=dict]").on('change', function() {
+            lookupDictType  =  $('#dict:checked').val(); 
             showResults();
         });
 
         //Clear Canvas Content
-        $('#clear').click(function() {
+        $('#'+ clearButtonId).click(function() {
             clearStrokes();
             showCounter();
 
@@ -274,7 +286,7 @@
                 strokeCount++;
                 showCounter();
 
-                showResults(strokeCount);
+                showResults();
 
      //           console.log(strokeDirections);
 
@@ -578,7 +590,7 @@
         if (strokeCount == 0)
             return;
 
-        var dictOption = $('#dict:checked').val();
+        var dictOption = lookupDictType; 
         var dictFilePath = 'hwdata/tegaki/' + dictOption + '/' + strokeCount + '.json';
         
 //        console.log('using dictionary DB:' + dictFilePath);
@@ -603,7 +615,7 @@
                         $.each(resultData, function(index, code) {
 
                             var char = $('<div></div>').attr('class', "col-md-2");
-                            var charText	=	'<span class="btn btn-default" data-button="char" >' + String.fromCharCode(code.code) + '</span>';
+                            var charText	=	'<span class="btn btn-default" data-button="dictchar" >' + String.fromCharCode(code.code) + '</span>';
                             char.append(charText);
 
                             charsContainer.append(char);
@@ -658,7 +670,11 @@
             resultsDiv: 'dictContainer',
             resultsPerRow: 5, // numer of match chars per row in display results
             width:  400,
-            height: 400
+            height: 400,
+            dictType:   'simplified',
+            searchTextId: searchTextId,
+            dictCharId:  dictCharId
+            
         }, options );
         
       return  this.each( function() {
