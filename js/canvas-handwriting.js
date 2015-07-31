@@ -604,8 +604,6 @@
         var dictFilePath = 'hwdata/tegaki/' + dictOption + '/' + strokeCount + '.json';
         
 //        console.log('using dictionary DB:' + dictFilePath);
-        
-        var charsContainer;
 
         //clear previous recogination data
         resetResults();
@@ -619,24 +617,32 @@
                         var dictData    =   data.concat(nextData);
                        
                         var resultData = getMatchChars(dictData);
+                        
+                        createResultsData(resultData);
 
-                        charsContainer = $('<div class="row"></div>');
-
-                        $.each(resultData, function(index, code) {
-
-                            var char = $('<div></div>').attr('class', "col-md-2");
-                            var charText	=	'<span class="btn btn-default" data-button="dictchar" >' + String.fromCharCode(code.code) + '</span>';
-                            char.append(charText);
-
-                            charsContainer.append(char);
-                        });
-
-                        $('#'+dictContainer).append(charsContainer);
                  });
     
 
         });
 
+    }
+    
+    //create results data base won match chars
+    this.createResultsData  =   function(resultData) {
+        var charsContainer;
+        
+        charsContainer = $('<div class="row"></div>');
+
+        $.each(resultData, function(index, code) {
+
+            var char = $('<div></div>').attr('class', "col-md-2");
+            var charText = '<span class="btn btn-default" data-button="dictchar" >' + String.fromCharCode(code.code) + '</span>';
+            char.append(charText);
+
+            charsContainer.append(char);
+        });
+
+        $('#' + dictContainer).append(charsContainer);
     }
 
 
