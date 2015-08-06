@@ -152,7 +152,7 @@
         	console.log('Mouse OUt...');
 
         	//context.closePath();
-            //$(canvas).unbind('mousemove touchmove').unbind('mouseup touchup');
+            //$(canvas).unbind('mousemove touchmove').unbind('mouseup touchend');
 
         });
 
@@ -161,12 +161,11 @@
             prevPoint = getpos(e)
             strokeLines = [prevPoint]
 
-
             $(canvas).on('mousemove touchmove', function(e) {
                 pos = getpos(e)
 
                 context.beginPath();
-                context.lineWidth = 5;
+                context.lineWidth = 2;
                 context.moveTo(prevPoint.x, prevPoint.y);
                 context.lineTo(pos.x, pos.y);
                 context.stroke();
@@ -179,10 +178,10 @@
             context.strokeStyle = "rgba(0,0,0,0.2)"
 
             //Stroke ENDED 
-            $(canvas).on('mouseup touchup', function() {
+            $(canvas).on('mouseup touchend', function() {
 
                 context.closePath();
-                $(canvas).unbind('mousemove touchmove').unbind('mouseup touchup');
+                $(canvas).unbind('mousemove touchmove').unbind('mouseup touchend');
                 corners = [strokeLines[0]];
 
                 var n = 0
@@ -192,8 +191,11 @@
 
                     var pt = strokeLines[i + 1]
                     var d = delta(lastCorner, strokeLines[i - 1])
+                    
+                    console.log(len(d));
 
-                    if (len(d) > 20 && n > 2) {
+                    if (len(d) > 15 && n > 2) {
+                        
                         ac = delta(strokeLines[i - 1], pt)
                         if (Math.abs(angle_between(ac, d)) > Math.PI / 4) {
                             pt.index = i
@@ -210,43 +212,6 @@
                     corners.push(strokeLines[0])
 
                     context.fillStyle = 'rgba(0, 0, 255, 0.3)'
-
-                    if (corners.length == 5) {
-                        //check for square
-                        var p1 = corners[0]
-                        var p2 = corners[1]
-                        var p3 = corners[2]
-                        var p4 = corners[3]
-                        var p1p2 = delta(p1, p2)
-                        var p2p3 = delta(p2, p3)
-                        var p3p4 = delta(p3, p4)
-                        var p4p1 = delta(p4, p1)
-                        if ((Math.abs(angle_between(p1p2, p2p3) - Math.PI / 2)) < Math.PI / 6
-                                && (Math.abs(angle_between(p2p3, p3p4) - Math.PI / 2)) < Math.PI / 6
-                                && (Math.abs(angle_between(p3p4, p4p1) - Math.PI / 2)) < Math.PI / 6
-                                && (Math.abs(angle_between(p4p1, p1p2) - Math.PI / 2)) < Math.PI / 6) {
-                            context.fillStyle = 'rgba(0, 255, 255, 0.3)'
-                            var p1p3 = delta(p1, p3)
-                            var p2p4 = delta(p2, p4)
-
-                            var diag = (len(p1p3) + len(p2p4)) / 4.0
-
-                            var tocenter1 = scale(unit(p1p3), -diag)
-                            var tocenter2 = scale(unit(p2p4), -diag)
-
-                            var center = average([p1, p2, p3, p4])
-
-                            var angle = angle_between(p1p3, p2p4)
-
-                            corners = [add(center, tocenter1),
-                                add(center, tocenter2),
-                                add(center, scale(tocenter1, -1)),
-                                add(center, scale(tocenter2, -1)),
-                                add(center, tocenter1)]
-                        }
-
-
-                    }
 
                     context.lineWidth = 1;
 
@@ -537,6 +502,7 @@
     //BOF: MATCH SORT FILTERS
     function matchCompare(a, b) {
 
+        var sortOrder   =   0;
         // sort by strokeCount , ASC
         if (a.strokeCount < b.strokeCount) {
             return -1;
