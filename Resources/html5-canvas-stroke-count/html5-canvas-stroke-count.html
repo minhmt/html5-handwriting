@@ -170,7 +170,7 @@ $(document).ready(function(){
                         var pt = line[i + 1]
                         var d = delta(lastCorner, line[i - 1])
 
-                        if (len(d) > 20 && n > 2) {
+                        if (len(d) > 9 && n > 2) {
                             ac = delta(line[i - 1], pt)
                             if (Math.abs(angle_between(ac, d)) > Math.PI / 4) {
                                 pt.index = i
@@ -183,7 +183,7 @@ $(document).ready(function(){
                         n++
                     }
 
-                    if (len(delta(line[line.length - 1], line[0])) < 25) {
+                    if (len(delta(line[line.length - 1], line[0])) < 9) {
                         corners.push(line[0])
 
                         c.fillStyle = 'rgba(0, 0, 255, 0.3)'

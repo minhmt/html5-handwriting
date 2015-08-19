@@ -14,6 +14,7 @@
     var dictCharId  =   'dictchar';
     var clearButtonId   =   'clear';
     var btnSearchId =   'btnSearch';
+    var penSize =   3; // draw pen size
     
     var lookupDictType  =   'simplified'; // type of look up dictionary (Traditional /Simplified)
     
@@ -39,6 +40,7 @@
         dictCharId   =  settings.dictCharId;
         lookupDictType  =   settings.dictType;
         btnSearchId =   settings.btnSearchId;
+        penSize =   settings.penSize;
         
         
         
@@ -157,7 +159,7 @@
         });
 
         // Mouse Down/ Touch Down
-        $(canvas).on('mousedown touchend', function(e) {
+        $(canvas).on('mousedown touchstart', function(e) {
             prevPoint = getpos(e)
             strokeLines = [prevPoint]
 
@@ -165,7 +167,7 @@
                 pos = getpos(e)
 
                 context.beginPath();
-                context.lineWidth = 2;
+                context.lineWidth = penSize;
                 context.moveTo(prevPoint.x, prevPoint.y);
                 context.lineTo(pos.x, pos.y);
                 context.stroke();
@@ -192,9 +194,9 @@
                     var pt = strokeLines[i + 1]
                     var d = delta(lastCorner, strokeLines[i - 1])
                     
-                    console.log(len(d));
+                    console.log('stroke length:' +len(d));
 
-                    if (len(d) > 15 && n > 2) {
+                    if (len(d) > 9 && n > 2) {
                         
                         ac = delta(strokeLines[i - 1], pt)
                         if (Math.abs(angle_between(ac, d)) > Math.PI / 4) {
@@ -208,7 +210,7 @@
                     n++
                 }
 
-                if (len(delta(strokeLines[strokeLines.length - 1], strokeLines[0])) < 25) {
+                if (len(delta(strokeLines[strokeLines.length - 1], strokeLines[0])) < 9) {
                     corners.push(strokeLines[0])
 
                     context.fillStyle = 'rgba(0, 0, 255, 0.3)'
@@ -650,12 +652,13 @@
             canvasID: 'handwriting-canvas',
             resultsDiv: 'dictContainer',
             resultsPerRow: 5, // numer of match chars per row in display results
-            width:  400,
-            height: 400,
+            width:  200,
+            height: 200,
             dictType:   'simplified',
             searchTextId: searchTextId,
             dictCharId:  dictCharId,
-            btnSearchId: 'btnSearch'
+            btnSearchId: 'btnSearch',
+            penSize:    3,
             
         }, options );
         
