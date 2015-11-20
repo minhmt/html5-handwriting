@@ -8,7 +8,7 @@
     var strokeOrder =   []; // array of stroke points in order
     var radicalCount = 0;
     var searchString = '';
-    var matchRange    =   2;
+    var matchRange    =   3;
     var strokeDirections    =   []; // array of stroke angle in degrees in (0,0) axis
     var searchTextId =   'searchText';
     var dictCharId  =   'dictchar';
@@ -150,14 +150,6 @@
 
     this.addMouseSupport    =   function () {
         
-        $(canvas).on('mouseout touchleave', function(e) {
-        	console.log('Mouse OUt...');
-
-        	//context.closePath();
-            //$(canvas).unbind('mousemove touchmove').unbind('mouseup touchend');
-
-        });
-
         // Mouse Down/ Touch Down
         $(canvas).on('mousedown touchstart', function(e) {
             prevPoint = getpos(e)
@@ -180,10 +172,10 @@
             context.strokeStyle = "rgba(0,0,0,0.2)"
 
             //Stroke ENDED 
-            $(canvas).on('mouseup touchend', function() {
+            $(canvas).on('mouseup touchend mouseout touchleave', function() {
 
                 context.closePath();
-                $(canvas).unbind('mousemove touchmove').unbind('mouseup touchend');
+                $(canvas).unbind('mousemove touchmove').unbind('mouseup touchend mouseout touchleave');
                 corners = [strokeLines[0]];
 
                 var n = 0
@@ -435,17 +427,19 @@
 
         $.each(dictData, function(index, data) {
             isMatch =   true;
+            data.matchDirection =   [];
             
             for (var i=0; i<strokeCount; i++) {
                 
               isMatch   = strokePointsMatch(strokeOrder[i],data.strokeOrder[i] );
                 // add new filer here like bellow case
-                if (isMatch)
-                  isMatch = directionFilter(strokeDirections[i], data.directions[i]);              
+//                if (isMatch)
+//                  isMatch = directionFilter(strokeDirections[i], data.directions[i]);              
               
               if(isMatch) {
                     // process stroke points match
                     data.strokeOrder[i].matchPercent = Math.abs(strokeOrder[i] - data.strokeOrder[i]);
+                    data.matchDirection[i]  =   directionFilter(strokeDirections[i], data.directions[i]);
                    // add any good Recognition Filter here
                } else {
                    isMatch  =   false;
@@ -458,12 +452,10 @@
 
         });
         
-        
+       console.log(matchData);
+               
         if (matchData.length > 0)
             matchData.sort(matchCompare);
-        
-   //     console.log(matchData);
-        
         
         return matchData;
     }
@@ -485,15 +477,19 @@
     //filter by direction    
     //@param data : dictionary Data
     function directionFilter(strokeDirection, dataDirection) {
-        var isMatch = false;
+        var isMatch = 0;
 
         isMatch =  ( (strokeDirection.d2=='d' || strokeDirection.d2=='h') && (dataDirection.d2=='d' || dataDirection.d2=='h' ) ) || (strokeDirection.d2 == dataDirection.d2);
         
         if (isMatch) {
             //horizontal /vertical direction
             if (dataDirection['d2']=='d' ) { // Diagonal
-               isMatch = (strokeDirection['d1'] == dataDirection['d1']); // must have same Diagonal direction
-            }
+               if  (strokeDirection['d1'] == dataDirection['d1']) {  // must have same Diagonal direction
+                   isMatch  =   true;
+               } else {
+                   isMatch   =   false;
+               }
+            } 
         } 
             
       return isMatch;
@@ -504,7 +500,16 @@
     //BOF: MATCH SORT FILTERS
     function matchCompare(a, b) {
 
-        var sortOrder   =   0;
+      //sort by direction     
+     for (var i=0; i<strokeCount; i++) {
+         // horizontal/ vertical first
+         if ( (a.matchDirection[i] > b.matchDirection[i]) ) {
+             return -1;
+         } else if (a.matchDirection[i] < b.matchDirection[i]) {
+             return 1;
+         }
+         
+     }
         // sort by strokeCount , ASC
         if (a.strokeCount < b.strokeCount) {
             return -1;
@@ -512,50 +517,7 @@
             return 1;
         }
         
-    //sort by direction     
-     for (var i=0; i<strokeCount; i++) {
-         // horizontal/ vertical first
-         if ( (strokeDirections[i].d2 == a.directions[i].d2 && strokeDirections[i].d2 != b.directions[i].d2) ) {
-             return -1;
-         } else {
-                //Diagonal next
-                if ((strokeDirections[i].d1 == a.directions[i].d1 && strokeDirections[i].d1 != b.directions[i].d1)) {
-                    return -1;
-                } else {
-                    return 1;
-                }
-         }
          
-     }
-    
-        // sort by stroke points match for each Stroke
-        for (var i = 0; i < a.strokeOrder.length; i++) {
-
-            if (typeof a.strokeOrder[i].matchPercent !='undefined') {
-                if (a.strokeOrder[i].matchPercent < b.strokeOrder[i].matchPercent ) {
-                    return -1;
-                }
-
-                if (a.strokeOrder[i].matchPercent > b.strokeOrder[i].matchPercent) {
-                    return 1;
-                }
-            }
-        }
-        
-        //sort by stroke angle match, ORDER BY stroke index DESC is a must
-        for (var i=0; i<strokeCount; i++) {
-            
-            var aA  =   Math.abs(strokeDirections[i].a - a.directions[i].a);
-            var bA  =   Math.abs(strokeDirections[i].a - b.directions[i].a);
-            
-            if (aA<bA) {
-                return -1;
-            } else {
-                return 1;
-            }        
-        }        
-        
-       
         return 0;
     }
     
@@ -652,8 +614,8 @@
             canvasID: 'handwriting-canvas',
             resultsDiv: 'dictContainer',
             resultsPerRow: 5, // numer of match chars per row in display results
-            width:  200,
-            height: 200,
+            width:  400,
+            height: 400,
             dictType:   'simplified',
             searchTextId: searchTextId,
             dictCharId:  dictCharId,
